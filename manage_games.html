@@ -144,7 +144,7 @@
   </div>
 
   <script>
-    // RI: We only need the PAT‐login functions and generic fetch/commit from scripts.js
+    // Only local JS needed for manage_games.html
     const LOCAL_STORAGE_TOKEN_KEY = "github_access_token";
     const GAME_OPTIONS_PATH = "gameOptions.json";
     const API_BASE_URL = `https://api.github.com/repos/EveHaddox/Games-Leaderboard`;
@@ -154,7 +154,6 @@
       window.location.href = "index.html";
     }
 
-    // Generic fetchJSON and commitJSON from scripts.js:
     async function fetchJSON(path) {
       const url = `https://raw.githubusercontent.com/EveHaddox/Games-Leaderboard/main/${path}?cachebust=${Date.now()}`;
       const res = await fetch(url);
@@ -207,7 +206,6 @@
       return await res.json();
     }
 
-    // Populate list of existing game options
     async function renderGameOptions() {
       const list = document.getElementById("games-list");
       list.innerHTML = "";
@@ -224,7 +222,7 @@
         span.innerText = gameName;
         li.appendChild(span);
 
-        // Only allow removal if idx ≥ 0 (we want to allow removing any option)
+        // Allow removal of any option
         const btn = document.createElement("button");
         btn.className = "remove-game-button";
         btn.innerText = "Remove";
@@ -235,7 +233,6 @@
       });
     }
 
-    // Add a new game option
     async function onAddGameOptionSubmit(event) {
       event.preventDefault();
       const input = document.getElementById("new-game-name");
@@ -259,7 +256,6 @@
       }
     }
 
-    // Remove a game option at index idx
     async function removeGameOption(idx) {
       try {
         const { sha, content: oldBase64 } = await getFileSHAandContent(GAME_OPTIONS_PATH);
@@ -272,9 +268,7 @@
       }
     }
 
-    // On page load:
     function initManageGamesPage() {
-      // If no token, redirect to admin login
       if (!localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY)) {
         window.location.href = "admin.html";
         return;

@@ -1,18 +1,18 @@
 // scripts.js
 
 // ──────────────── CONFIGURATION ────────────────
-const GITHUB_USERNAME       = "EveHaddox";
-const REPO_NAME             = "Games-Leaderboard";
+const GITHUB_USERNAME         = "EveHaddox";
+const REPO_NAME               = "Games-Leaderboard";
 
-const RAW_BASE_URL          = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main`;
-const API_BASE_URL          = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}`;
+const RAW_BASE_URL            = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main`;
+const API_BASE_URL            = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}`;
 
-const GAMES_JSON_PATH       = "games.json";
-const GAME_OPTIONS_PATH     = "gameOptions.json";
+const GAMES_JSON_PATH         = "games.json";
+const GAME_OPTIONS_PATH       = "gameOptions.json";
 const LOCAL_STORAGE_TOKEN_KEY = "github_access_token"; // stores the PAT in localStorage
 
 
-// ──────────────── UTILITY: Fetch JSON (generic) ────────────────
+// ──────────────── GENERIC JSON FETCH ────────────────
 async function fetchJSON(path) {
   const url = `${RAW_BASE_URL}/${path}?cachebust=${Date.now()}`;
   const res = await fetch(url);
@@ -20,7 +20,7 @@ async function fetchJSON(path) {
   return await res.json();
 }
 
-// ──────────────── UTILITY: Get file SHA + content (generic) ────────────────
+// ──────────────── GENERIC GET FILE SHA & CONTENT ────────────────
 async function getFileSHAandContent(path) {
   const endpoint = `${API_BASE_URL}/contents/${path}`;
   const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
@@ -39,7 +39,7 @@ async function getFileSHAandContent(path) {
   return { sha: data.sha, content: data.content };
 }
 
-// ──────────────── UTILITY: Commit JSON back to GitHub (generic) ────────────────
+// ──────────────── GENERIC COMMIT JSON BACK TO GITHUB ────────────────
 async function commitJSON(newArray, path, commitMessage) {
   const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
   if (!accessToken) throw new Error(`No GitHub token found. Please paste a valid PAT first.`);
@@ -87,15 +87,15 @@ function savePAT() {
 
 function logout() {
   localStorage.removeItem(LOCAL_STORAGE_TOKEN_KEY);
-  window.location.reload();
+  window.location.href = "index.html";
 }
 
 /**
  * On admin.html load:
- * 1. Toggle between login inputs vs. “Leaderboard/Manage Games/Log Out” buttons.
- * 2. Populate game‐dropdown.
+ * 1. Toggle between login inputs vs. Admin header buttons.
+ * 2. Populate game‐dropdown (inside a try/catch so errors don’t break other pages).
  * 3. Populate player autocomplete.
- * 4. Initialize team inputs (including “Remove Team” on team ≥ 2).
+ * 4. Initialize team inputs.
  * 5. Update “Winning Team” dropdown.
  */
 async function onAdminPageLoad() {
@@ -105,10 +105,27 @@ async function onAdminPageLoad() {
     document.getElementById("post-login-buttons").style.display = "flex";
     document.getElementById("game-form-container").style.display = "block";
 
-    await populateGameDropdown();       // load options into #gameName <select>
-    await populatePlayerDatalist();     // load existing players into <datalist>
-    initializeTeamInputs();             // bind dynamic team/player inputs
-    updateWinningTeamOptions();         // refresh “Winning Team” <select>
+    // 1) Populate game dropdown, but catch errors so index/player pages aren’t affected
+    try {
+      await populateGameDropdown();
+    } catch (err) {
+      console.warn("Could not populate game dropdown:", err);
+      const select = document.getElementById("gameName");
+      if (select) {
+        select.innerHTML = `<option value="" disabled selected>(no games)</option>`;
+      }
+    }
+
+    // 2) Populate the player‐name datalist
+    try {
+      await populatePlayerDatalist();
+    } catch (err) {
+      console.warn("Could not populate player datalist:", err);
+    }
+
+    // 3) Initialize dynamic team/player inputs and winning‐team dropdown
+    initializeTeamInputs();
+    updateWinningTeamOptions();
   } else {
     document.getElementById("pat-login").style.display = "flex";
     document.getElementById("post-login-buttons").style.display = "none";
@@ -117,18 +134,53 @@ async function onAdminPageLoad() {
 }
 
 
-// ──────────────── AUTOCOMPLETE: Populate <datalist> from existing players ────────────────
-async function populatePlayerDatalist() {
-  const datalist = document.getElementById("player-names-list");
-  datalist.innerHTML = "";
+// ──────────────── POPULATE GAME DROPDOWN ────────────────
+async function populateGameDropdown() {
+  const select = document.getElementById("gameName");
+  if (!select) return; // If we’re not on admin.html, skip
 
-  let games;
+  select.innerHTML = "";  // Clear out any old options
+
+  let options;
   try {
-    games = await fetchJSON(GAMES_JSON_PATH);
+    options = await fetchJSON(GAME_OPTIONS_PATH);
   } catch (err) {
-    console.warn("Could not fetch games for autocomplete:", err);
+    // If fetch fails (e.g. file missing), show placeholder
+    select.innerHTML = `<option value="" disabled selected>(no games defined)</option>`;
     return;
   }
+
+  // If the JSON is empty or not an array, also show placeholder
+  if (!Array.isArray(options) || options.length === 0) {
+    select.innerHTML = `<option value="" disabled selected>(no games defined)</option>`;
+    return;
+  }
+
+  // Otherwise, build a real <select> list
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.innerText = "-- Select Game --";
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  select.appendChild(placeholder);
+
+  options.forEach((gameName) => {
+    const opt = document.createElement("option");
+    opt.value = gameName;
+    opt.innerText = gameName;
+    select.appendChild(opt);
+  });
+}
+
+
+
+// ──────────────── POPULATE PLAYER DATALIST ────────────────
+async function populatePlayerDatalist() {
+  const datalist = document.getElementById("player-names-list");
+  if (!datalist) return;
+
+  datalist.innerHTML = "";
+  const games = await fetchJSON(GAMES_JSON_PATH);
   const nameSet = new Set();
   games.forEach((game) => {
     game.teams.forEach((team) => {
@@ -150,52 +202,7 @@ async function populatePlayerDatalist() {
 }
 
 
-// ──────────────── GAME DROPDOWN: Populate <select id="gameName"> ────────────────
-async function populateGameDropdown() {
-  const select = document.getElementById("gameName");
-  select.innerHTML = "";
-
-  let options;
-  try {
-    options = await fetchJSON(GAME_OPTIONS_PATH);
-  } catch (err) {
-    console.warn("Could not fetch gameOptions.json:", err);
-    return;
-  }
-
-  // If no options yet, show a placeholder
-  if (options.length === 0) {
-    const opt = document.createElement("option");
-    opt.value = "";
-    opt.innerText = "No games defined";
-    opt.disabled = true;
-    opt.selected = true;
-    select.appendChild(opt);
-    return;
-  }
-
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.innerText = "-- Select Game --";
-  placeholder.disabled = true;
-  placeholder.selected = true;
-  select.appendChild(placeholder);
-
-  options.forEach((gameName) => {
-    const opt = document.createElement("option");
-    opt.value = gameName;
-    opt.innerText = gameName;
-    select.appendChild(opt);
-  });
-}
-
-
 // ──────────────── DYNAMIC TEAM/PLAYER INPUT LOGIC ────────────────
-
-/**
- * Create a new <input class="player-input" list="player-names-list"> inside playersListDiv,
- * bind its events (append new blank + cleanup), and append.
- */
 function appendPlayerInput(playersListDiv) {
   const input = document.createElement("input");
   input.type = "text";
@@ -206,7 +213,6 @@ function appendPlayerInput(playersListDiv) {
   input.addEventListener("input", () => {
     const allInputs = playersListDiv.querySelectorAll(".player-input");
     const lastInput = allInputs[allInputs.length - 1];
-
     if (input === lastInput && input.value.trim() !== "") {
       appendPlayerInput(playersListDiv);
     }
@@ -216,9 +222,6 @@ function appendPlayerInput(playersListDiv) {
   playersListDiv.appendChild(input);
 }
 
-/**
- * Remove extra trailing empty inputs: if the last two are both empty, remove the last, repeat.
- */
 function cleanUpTrailingEmptyInputs(playersListDiv) {
   let inputs = Array.from(playersListDiv.querySelectorAll(".player-input"));
   while (
@@ -232,20 +235,15 @@ function cleanUpTrailingEmptyInputs(playersListDiv) {
   }
 }
 
-/**
- * Add a new team section (with remove button) to #teams-container.
- */
 function addNewTeamSection() {
   const teamsContainer = document.getElementById("teams-container");
   const existingTeams = teamsContainer.querySelectorAll(".team-section");
-  const newTeamIndex = existingTeams.length; // index ≥ 2 → removable
+  const newTeamIndex = existingTeams.length;
 
-  // Wrapper <div class="team-section" data-team-index="X">
   const teamDiv = document.createElement("div");
   teamDiv.className = "team-section";
   teamDiv.setAttribute("data-team-index", newTeamIndex);
 
-  // Header container (flex): title + remove button
   const headerContainer = document.createElement("div");
   headerContainer.className = "team-header-container";
 
@@ -254,7 +252,6 @@ function addNewTeamSection() {
   header.innerText = `Team ${newTeamIndex + 1}`;
   headerContainer.appendChild(header);
 
-  // Remove‐button for teams index ≥ 2
   const removeBtn = document.createElement("button");
   removeBtn.className = "remove-team-button";
   removeBtn.innerText = "Remove";
@@ -263,7 +260,6 @@ function addNewTeamSection() {
 
   teamDiv.appendChild(headerContainer);
 
-  // .players-list container with first input
   const playersListDiv = document.createElement("div");
   playersListDiv.className = "players-list";
   teamDiv.appendChild(playersListDiv);
@@ -274,31 +270,21 @@ function addNewTeamSection() {
   updateWinningTeamOptions();
 }
 
-/**
- * Remove the team section at index `idx`, then re-index all remaining teams,
- * update their headers, and refresh the “Winning Team” <select>.
- */
 function removeTeamSection(idx) {
   const teamsContainer = document.getElementById("teams-container");
   let teamDivs = Array.from(teamsContainer.querySelectorAll(".team-section"));
 
-  // Prevent removing Team 0 or Team 1
   if (idx < 2) return;
 
-  // 1) Remove the specified team‐div
   const teamToRemove = teamDivs[idx];
   teamsContainer.removeChild(teamToRemove);
 
-  // 2) Re-index all remaining teams
   teamDivs = Array.from(teamsContainer.querySelectorAll(".team-section"));
   teamDivs.forEach((div, newIndex) => {
     div.setAttribute("data-team-index", newIndex);
-
-    // Update header text
     const headerDiv = div.querySelector(".team-header");
     headerDiv.innerText = `Team ${newIndex + 1}`;
 
-    // Manage remove‐button for index ≥ 2
     let removeBtn = div.querySelector(".remove-team-button");
     if (newIndex >= 2) {
       if (!removeBtn) {
@@ -308,7 +294,6 @@ function removeTeamSection(idx) {
         removeBtn.addEventListener("click", () => removeTeamSection(newIndex));
         div.querySelector(".team-header-container").appendChild(removeBtn);
       } else {
-        // Rebind with correct index
         const newRemove = removeBtn.cloneNode(true);
         newRemove.addEventListener("click", () => removeTeamSection(newIndex));
         removeBtn.replaceWith(newRemove);
@@ -318,13 +303,9 @@ function removeTeamSection(idx) {
     }
   });
 
-  // 3) Refresh the Winning Team dropdown
   updateWinningTeamOptions();
 }
 
-/**
- * Initialize team inputs for the first two teams, plus bind any dynamically added teams.
- */
 function initializeTeamInputs() {
   const teamsContainer = document.getElementById("teams-container");
   const teamDivs = teamsContainer.querySelectorAll(".team-section");
@@ -333,13 +314,11 @@ function initializeTeamInputs() {
     const playersListDiv = teamDiv.querySelector(".players-list");
     let inputs = playersListDiv.querySelectorAll(".player-input");
 
-    // If no input exists, add one
     if (inputs.length === 0) {
       appendPlayerInput(playersListDiv);
       inputs = playersListDiv.querySelectorAll(".player-input");
     }
 
-    // Bind “input” event on existing inputs if not yet bound
     inputs.forEach((input) => {
       if (!input.dataset.bound) {
         input.setAttribute("list", "player-names-list");
@@ -355,7 +334,6 @@ function initializeTeamInputs() {
       }
     });
 
-    // If index ≥ 2 and remove‐button doesn’t exist, create it
     if (index >= 2 && !teamDiv.querySelector(".remove-team-button")) {
       const headerContainer = teamDiv.querySelector(".team-header-container");
       const removeBtn = document.createElement("button");
@@ -369,9 +347,6 @@ function initializeTeamInputs() {
   });
 }
 
-/**
- * Rebuild the “Winning Team” <select> so it matches the current number of teams.
- */
 function updateWinningTeamOptions() {
   const select = document.getElementById("winningTeam");
   const teamsContainer = document.getElementById("teams-container");
@@ -391,7 +366,6 @@ function updateWinningTeamOptions() {
 async function onAddGameFormSubmit(event) {
   event.preventDefault();
 
-  // 1) Read gameName & winningTeamIndex
   const gameName = document.getElementById("gameName").value;
   const winningTeamIndex = parseInt(document.getElementById("winningTeam").value, 10);
 
@@ -400,7 +374,6 @@ async function onAddGameFormSubmit(event) {
     return;
   }
 
-  // 2) Gather teams: for each .team-section, collect non-empty player names
   const teamsContainer = document.getElementById("teams-container");
   const teamDivs = teamsContainer.querySelectorAll(".team-section");
   const teams = [];
@@ -424,7 +397,6 @@ async function onAddGameFormSubmit(event) {
     return;
   }
 
-  // 3) Build and commit the new game object
   const newGame = {
     timestamp: new Date().toISOString(),
     gameName,
@@ -446,6 +418,157 @@ async function onAddGameFormSubmit(event) {
     console.error(err);
     alert("Error adding game: " + err.message);
   }
+}
+
+
+// ──────────────── LEADERBOARD: Compute stats & render ────────────────
+function computePlayerStats(gamesArray) {
+  const stats = new Map();
+
+  function ensurePlayer(name) {
+    if (!stats.has(name)) {
+      stats.set(name, { wins: 0, losses: 0, played: 0 });
+    }
+  }
+
+  gamesArray.forEach((game) => {
+    const winnerIdx = game.winningTeamIndex;
+    game.teams.forEach((teamPlayers, teamIdx) => {
+      const isWinnerTeam = teamIdx === winnerIdx;
+      teamPlayers.forEach((player) => {
+        ensurePlayer(player);
+        const pstats = stats.get(player);
+        pstats.played += 1;
+        if (isWinnerTeam) pstats.wins += 1;
+        else pstats.losses += 1;
+      });
+    });
+  });
+
+  return stats;
+}
+
+async function renderLeaderboard() {
+  let games;
+  try {
+    games = await fetchJSON(GAMES_JSON_PATH);
+  } catch (err) {
+    document.getElementById("leaderboard").innerText = "Error loading data: " + err;
+    return;
+  }
+
+  const statsMap = computePlayerStats(games);
+  const rows = Array.from(statsMap.entries())
+    .map(([player, s]) => ({ player, ...s }))
+    .sort((a, b) => b.wins - a.wins || b.played - a.played);
+
+  const table = document.createElement("table");
+  const headerRow = document.createElement("tr");
+  ["Player", "Wins", "Losses", "Played"].forEach((heading) => {
+    const th = document.createElement("th");
+    th.innerText = heading;
+    headerRow.appendChild(th);
+  });
+  table.appendChild(headerRow);
+
+  rows.forEach((rowData) => {
+    const tr = document.createElement("tr");
+    const nameCell = document.createElement("td");
+    const a = document.createElement("a");
+    a.href = `player.html?user=${encodeURIComponent(rowData.player)}`;
+    a.innerText = rowData.player;
+    nameCell.appendChild(a);
+    tr.appendChild(nameCell);
+
+    ["wins", "losses", "played"].forEach((field) => {
+      const td = document.createElement("td");
+      td.innerText = rowData[field];
+      tr.appendChild(td);
+    });
+    table.appendChild(tr);
+  });
+
+  const container = document.getElementById("leaderboard");
+  container.innerHTML = "";
+  container.appendChild(table);
+}
+
+
+// ──────────────── PLAYER PAGE: Extract user & render history ────────────────
+function getUserFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("user");
+}
+
+async function renderPlayerPage() {
+  const player = getUserFromQuery();
+  if (!player) {
+    document.getElementById("player-games").innerText = "No player specified.";
+    return;
+  }
+  document.getElementById("player-name").innerText = player;
+
+  let games;
+  try {
+    games = await fetchJSON(GAMES_JSON_PATH);
+  } catch (err) {
+    document.getElementById("player-games").innerText = "Error loading data: " + err;
+    return;
+  }
+
+  const filtered = games.filter((game) =>
+    game.teams.some((team) => team.includes(player))
+  );
+
+  if (filtered.length === 0) {
+    document.getElementById("player-games").innerText = `No games found for “${player}”.`;
+    return;
+  }
+
+  const table = document.createElement("table");
+  const headerRow = document.createElement("tr");
+  ["Date/Time", "Game Name", "Team (You + Allies)", "Opponents", "Result"].forEach((h) => {
+    const th = document.createElement("th");
+    th.innerText = h;
+    headerRow.appendChild(th);
+  });
+  table.appendChild(headerRow);
+
+  filtered.forEach((game) => {
+    const tr = document.createElement("tr");
+
+    const dtCell = document.createElement("td");
+    const dt = new Date(game.timestamp);
+    dtCell.innerText = dt.toUTCString().replace(/ GMT$/, "");
+    tr.appendChild(dtCell);
+
+    const gnCell = document.createElement("td");
+    gnCell.innerText = game.gameName;
+    tr.appendChild(gnCell);
+
+    const myTeamIdx = game.teams.findIndex((team) => team.includes(player));
+    const myTeam = game.teams[myTeamIdx];
+    const teamCell = document.createElement("td");
+    teamCell.innerText = myTeam.join(", ");
+    tr.appendChild(teamCell);
+
+    const opponents = game.teams
+      .filter((_, idx) => idx !== myTeamIdx)
+      .flat();
+    const oppCell = document.createElement("td");
+    oppCell.innerText = opponents.join(", ");
+    tr.appendChild(oppCell);
+
+    const resCell = document.createElement("td");
+    resCell.innerText = (myTeamIdx === game.winningTeamIndex) ? "W" : "L";
+    tr.appendChild(resCell);
+
+    table.appendChild(tr);
+  });
+
+  const container = document.getElementById("player-games");
+  container.innerHTML = "";
+  container.appendChild(table);
 }
 
 
