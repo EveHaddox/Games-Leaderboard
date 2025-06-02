@@ -8,7 +8,7 @@ const RAW_BASE_URL          = `https://raw.githubusercontent.com/${GITHUB_USERNA
 const API_BASE_URL          = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}`;
 
 const GAMES_JSON_PATH       = "games.json";
-const LOCAL_STORAGE_TOKEN_KEY = "github_access_token"; // stores the PAT in localStorage
+const LOCAL_STORAGE_TOKEN_KEY = "github_access_token"; // stores the PAT under this key
 
 
 // ──────────────── UTILITY: Fetch games.json ────────────────
@@ -28,6 +28,7 @@ async function getFileSHAandContent() {
 
   const res = await fetch(endpoint, { headers });
   if (res.status === 404) {
+    // If file doesn’t exist yet, return empty array + null SHA
     return { sha: null, content: btoa("[]") };
   }
   if (!res.ok) {
@@ -45,7 +46,7 @@ async function commitGames(newGamesArray, commitMessage) {
     throw new Error("No GitHub token found. Please paste a valid PAT first.");
   }
 
-  const { sha, content: oldBase64 } = await getFileSHAandContent();
+  const { sha, content: oldContentBase64 } = await getFileSHAandContent();
   const newContentString = JSON.stringify(newGamesArray, null, 2);
   const newContentBase64 = btoa(unescape(encodeURIComponent(newContentString)));
 
@@ -75,7 +76,7 @@ async function commitGames(newGamesArray, commitMessage) {
 }
 
 
-// ──────────────── ADMIN: PAT-based login ────────────────
+// ──────────────── ADMIN: PAT‐based login ────────────────
 function savePAT() {
   const pat = document.getElementById("pat-input").value.trim();
   if (!pat) {
@@ -92,15 +93,23 @@ function logout() {
 }
 
 /**
- * On admin.html load: Show the PAT-input section if no token.
- * Otherwise show the “Add Game” form and initialize dynamic team/player logic.
+ * On admin.html load:
+ * 1. If no PAT saved, show the PAT‐input section.
+ * 2. Otherwise, show the Add Game form, populate datalist, and bind dynamic inputs.
  */
-function onAdminPageLoad() {
+async function onAdminPageLoad() {
   const token = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
   if (token) {
     document.getElementById("pat-section").style.display = "none";
     document.getElementById("game-form-container").style.display = "block";
+
+    // 1. Populate autocomplete datalist from existing games.json
+    await populatePlayerDatalist();
+
+    // 2. Initialize (and bind) dynamic team/player inputs
     initializeTeamInputs();
+
+    // 3. Update the Winning Team <select> based on current team count
     updateWinningTeamOptions();
   } else {
     document.getElementById("pat-section").style.display = "block";
@@ -109,45 +118,104 @@ function onAdminPageLoad() {
 }
 
 
+// ──────────────── AUTOCOMPLETE: Populate <datalist> from existing players ────────────────
+async function populatePlayerDatalist() {
+  const datalist = document.getElementById("player-names-list");
+  datalist.innerHTML = ""; // clear any old options
+
+  let games;
+  try {
+    games = await fetchGames();
+  } catch (err) {
+    console.warn("Could not fetch games for autocomplete:", err);
+    return;
+  }
+  const nameSet = new Set();
+  games.forEach((game) => {
+    game.teams.forEach((team) => {
+      team.forEach((player) => {
+        nameSet.add(player);
+      });
+    });
+  });
+
+  // Sort alphabetically
+  const sortedNames = Array.from(nameSet).sort((a, b) =>
+    a.toLowerCase().localeCompare(b.toLowerCase())
+  );
+
+  sortedNames.forEach((name) => {
+    const option = document.createElement("option");
+    option.value = name;
+    datalist.appendChild(option);
+  });
+}
+
+
 // ──────────────── DYNAMIC TEAM/PLAYER INPUT LOGIC ────────────────
 
 /**
- * Add a new blank player input inside a given team’s .players-list.
- * @param {HTMLElement} playersListDiv – The <div class="players-list"> for that team.
+ * Create a new <input class="player-input" list="player-names-list"> inside playersListDiv,
+ * bind its events, and ensure trailing‐empty cleanup logic.
  */
 function appendPlayerInput(playersListDiv) {
-  // Count existing inputs to set data-player-index
-  const existingInputs = playersListDiv.querySelectorAll(".player-input");
-  const newIndex = existingInputs.length;
-
   const input = document.createElement("input");
   input.type = "text";
   input.className = "player-input";
   input.placeholder = "Player name…";
-  input.setAttribute("data-player-index", newIndex);
+  input.setAttribute("list", "player-names-list");
 
-  // Whenever someone types into the last input, automatically append another one
+  // Event: on input → if this is the last non-empty, append a new blank; then clean up trailing empties
   input.addEventListener("input", () => {
-    // If this input is the last one in playersListDiv and is non-empty, add a new blank input
     const allInputs = playersListDiv.querySelectorAll(".player-input");
     const lastInput = allInputs[allInputs.length - 1];
+
+    // 1) If this input is last AND non-empty, append a new blank one
     if (input === lastInput && input.value.trim() !== "") {
       appendPlayerInput(playersListDiv);
     }
+
+    // 2) Remove extra trailing empty inputs: while the last two are both empty, remove the last
+    cleanUpTrailingEmptyInputs(playersListDiv);
   });
 
   playersListDiv.appendChild(input);
 }
 
 /**
- * Add a brand-new team section to #teams-container (with correct data-team-index).
+ * After any input event, ensure only one trailing empty input remains.
+ * If the last two inputs are both empty, remove the last, repeat until only one empty is left.
+ */
+function cleanUpTrailingEmptyInputs(playersListDiv) {
+  let inputs = playersListDiv.querySelectorAll(".player-input");
+  // Convert NodeList → Array for easy manipulation
+  inputs = Array.from(inputs);
+
+  // Keep removing the last input if:
+  // - There are at least two inputs, AND
+  // - Both the last input and the one before it have empty value
+  while (
+    inputs.length >= 2 &&
+    inputs[inputs.length - 1].value.trim() === "" &&
+    inputs[inputs.length - 2].value.trim() === ""
+  ) {
+    const toRemove = inputs.pop();
+    playersListDiv.removeChild(toRemove);
+    inputs = playersListDiv.querySelectorAll(".player-input");
+    inputs = Array.from(inputs);
+  }
+}
+
+/**
+ * When “+ Add Team” is clicked, create a new .team-section (with one blank player-input),
+ * give it the correct data-team-index, and update the Winning Team dropdown.
  */
 function addNewTeamSection() {
   const teamsContainer = document.getElementById("teams-container");
   const existingTeams = teamsContainer.querySelectorAll(".team-section");
-  const newTeamIndex = existingTeams.length; // e.g. if 2 teams exist, new index = 2
+  const newTeamIndex = existingTeams.length;
 
-  // Create the wrapper <div class="team-section" data-team-index="X">
+  // Wrapper <div class="team-section" data-team-index="X">
   const teamDiv = document.createElement("div");
   teamDiv.className = "team-section";
   teamDiv.setAttribute("data-team-index", newTeamIndex);
@@ -158,7 +226,7 @@ function addNewTeamSection() {
   header.innerText = `Team ${newTeamIndex + 1}`;
   teamDiv.appendChild(header);
 
-  // The .players-list container
+  // .players-list container
   const playersListDiv = document.createElement("div");
   playersListDiv.className = "players-list";
   teamDiv.appendChild(playersListDiv);
@@ -166,16 +234,17 @@ function addNewTeamSection() {
   // Add the first player input
   appendPlayerInput(playersListDiv);
 
-  // Append the new teamDiv to the container
+  // Append new teamDiv
   teamsContainer.appendChild(teamDiv);
 
-  // Update the “Winning Team” <select> to reflect the new count
+  // Refresh Winning Team <select> options
   updateWinningTeamOptions();
 }
 
 /**
- * Go through all current .team-section elements, ensure each .players-list
- * has at least one blank input, and bind the input‐event logic to existing inputs.
+ * For all existing .team-section elements:
+ * 1. If there’s no .player-input at all, create one.
+ * 2. Otherwise, ensure each existing .player-input has its “input” event bound.
  */
 function initializeTeamInputs() {
   const teamsContainer = document.getElementById("teams-container");
@@ -183,33 +252,37 @@ function initializeTeamInputs() {
 
   teamDivs.forEach((teamDiv) => {
     const playersListDiv = teamDiv.querySelector(".players-list");
+    let inputs = playersListDiv.querySelectorAll(".player-input");
 
-    // If no player-input exists at all, create one
-    if (!playersListDiv.querySelector(".player-input")) {
+    // If no input exists, add one
+    if (inputs.length === 0) {
       appendPlayerInput(playersListDiv);
+      inputs = playersListDiv.querySelectorAll(".player-input");
     }
 
-    // Otherwise, ensure the “last input → adds new one if non-empty” logic is bound
-    const inputs = playersListDiv.querySelectorAll(".player-input");
-    inputs.forEach((input, idx) => {
-      // Avoid rebinding if already has a listener
+    // Bind “input” event to each existing field if not already bound
+    inputs.forEach((input) => {
       if (!input.dataset.bound) {
+        input.setAttribute("list", "player-names-list");
         input.addEventListener("input", () => {
           const allInputs = playersListDiv.querySelectorAll(".player-input");
           const lastInput = allInputs[allInputs.length - 1];
           if (input === lastInput && input.value.trim() !== "") {
             appendPlayerInput(playersListDiv);
           }
+          cleanUpTrailingEmptyInputs(playersListDiv);
         });
         input.setAttribute("data-bound", "true");
       }
     });
+
+    // After binding, ensure no extra trailing blank inputs
+    cleanUpTrailingEmptyInputs(playersListDiv);
   });
 }
 
 /**
- * Rebuild the “Winning Team” <select> options so they match the current
- * number of teams in #teams-container. Each option’s value = team index.
+ * Rebuild the “Winning Team” <select> so its options = “Team 1”, “Team 2”, … up to current count.
  */
 function updateWinningTeamOptions() {
   const select = document.getElementById("winningTeam");
@@ -219,7 +292,6 @@ function updateWinningTeamOptions() {
   // Clear out old options
   select.innerHTML = "";
 
-  // Create new options: “Team 1” → value="0", “Team 2” → value="1", etc.
   for (let i = 0; i < teamCount; i++) {
     const opt = document.createElement("option");
     opt.value = i.toString();
@@ -243,7 +315,7 @@ function computePlayerStats(gamesArray) {
   gamesArray.forEach((game) => {
     const winnerIdx = game.winningTeamIndex;
     game.teams.forEach((teamPlayers, teamIdx) => {
-      const isWinnerTeam = (teamIdx === winnerIdx);
+      const isWinnerTeam = teamIdx === winnerIdx;
       teamPlayers.forEach((player) => {
         ensurePlayer(player);
         const pstats = stats.get(player);
@@ -331,8 +403,7 @@ async function renderPlayerPage() {
   );
 
   if (filtered.length === 0) {
-    document.getElementById("player-games").innerText =
-      `No games found for “${player}”.`;
+    document.getElementById("player-games").innerText = `No games found for “${player}”.`;
     return;
   }
 
@@ -428,7 +499,7 @@ async function onAddGameFormSubmit(event) {
     return;
   }
 
-  // 3) Build the new game object
+  // 3) Build and commit the new game object
   const newGame = {
     timestamp: new Date().toISOString(),
     gameName,
@@ -436,7 +507,6 @@ async function onAddGameFormSubmit(event) {
     winningTeamIndex
   };
 
-  // 4) Fetch existing games + commit the new one
   try {
     const { sha, content: oldBase64 } = await getFileSHAandContent();
     const oldArray = JSON.parse(atob(oldBase64));

@@ -1,56 +1,61 @@
 /* style.css */
 
+/* ─────────────── Elib Dark Theme ─────────────── */
+
+/* Base background and text */
 body {
+  background-color: rgb(26, 26, 26);      /* Elib.Colors.Background */
+  color: rgb(240, 240, 240);             /* Elib.Colors.PrimaryText */
   font-family: Arial, sans-serif;
   margin: 0 auto;
-  max-width: 800px;
+  max-width: 900px;
   padding: 1rem;
-  background: #f9f9f9;
-  color: #333;
 }
 
-h1, h2, h3 {
-  color: #222;
-}
-
+/* Links */
 a {
-  color: #0366d6;
+  color: rgb(180, 58, 58);               /* Elib.Colors.Primary (strong modern red) */
   text-decoration: none;
 }
 a:hover {
   text-decoration: underline;
 }
 
+/* Headers use a slightly lighter dark background */
+h1, h2, h3 {
+  background-color: rgb(36, 36, 36);     /* Elib.Colors.Header */
+  color: rgb(240, 240, 240);
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+/* Tables */
 table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 1rem;
+  background-color: rgb(36, 36, 36);       /* table background */
+  color: rgb(240, 240, 240);
 }
-
 th, td {
-  border: 1px solid #ddd;
+  border: 1px solid rgb(56, 56, 56);       /* Elib.Colors.Scroller as subtle border */
   padding: 0.5rem;
   text-align: left;
 }
-
 th {
-  background-color: #f0f0f0;
+  background-color: rgb(36, 36, 36);
+  color: rgb(200, 200, 200);               /* Elib.Colors.SecondaryText */
 }
 
-button, input[type="submit"] {
-  background-color: #0366d6;
-  color: #fff;
-  border: none;
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  cursor: pointer;
+/* Inputs and textareas */
+input[type="text"],
+input[type="password"],
+select,
+textarea {
+  background-color: rgb(36, 36, 36);       /* Elib.Colors.Header for fields */
+  color: rgb(240, 240, 240);
+  border: 1px solid rgb(56, 56, 56);       /* Elib.Colors.Scroller */
   border-radius: 4px;
-}
-button:hover, input[type="submit"]:hover {
-  background-color: #0356b6;
-}
-
-input, select, textarea {
   font-size: 1rem;
   padding: 0.4rem;
   width: 100%;
@@ -58,16 +63,50 @@ input, select, textarea {
   margin-bottom: 0.5rem;
 }
 
+/* Buttons */
+button,
+input[type="submit"] {
+  background-color: rgb(180, 58, 58);      /* Elib.Colors.Primary */
+  color: rgb(240, 240, 240);
+  border: none;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+button:hover,
+input[type="submit"]:hover {
+  background-color: rgb(190, 65, 65);      /* Elib.Colors.Negative (slightly brighter red) */
+}
+
+/* Disabled fields/text */
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background-color: rgb(56, 56, 56);       /* Elib.Colors.Scroller */
+  color: rgb(100, 100, 100);               /* Elib.Colors.DisabledText */
+}
+
+/* Form group spacing */
 .form-group {
   margin-bottom: 1rem;
 }
 
+/* Error messages */
 .error {
-  color: red;
-  margin-top: 1rem;
+  color: rgb(190, 65, 65);                 /* Elib.Colors.Negative */
+  margin-top: 0.5rem;
 }
 
-#login-button {
-  margin-top: 1rem;
-  margin-bottom: 2rem;
+/* Custom scrollbars (if supported) */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgb(36, 36, 36);             /* Elib.Colors.Header */
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(56, 56, 56);             /* Elib.Colors.Scroller */
+  border-radius: 4px;
 }

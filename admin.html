@@ -8,17 +8,18 @@
   <title>Admin Panel – Game Tracker</title>
   <link rel="stylesheet" href="style.css" />
   <style>
-    /* A little extra CSS just for the dynamic team/player inputs */
+    /* Extra CSS for dynamic team/player inputs */
     .team-section {
-      border: 1px solid #ccc;
-      padding: 1rem;
-      margin-bottom: 1rem;
+      background-color: rgb(36, 36, 36);    /* Elib.Header */
+      border: 1px solid rgb(56, 56, 56);    /* Elib.Scroller */
       border-radius: 4px;
-      background: #fff;
+      margin-bottom: 1rem;
+      padding: 0.75rem;
     }
     .team-header {
       font-weight: bold;
       margin-bottom: 0.5rem;
+      color: rgb(200, 200, 200);            /* Elib.SecondaryText */
     }
     .player-input {
       display: block;
@@ -33,9 +34,12 @@
   </style>
 </head>
 <body data-page="admin">
+  <!-- Datalist for player‐name autocomplete -->
+  <datalist id="player-names-list"></datalist>
+
   <h1>Admin Panel</h1>
 
-  <!-- SECTION A: Enter Personal Access Token (shown if no token in localStorage) -->
+  <!-- SECTION A: PAT input (shown if no token in localStorage) -->
   <div id="pat-section">
     <p>
       To add new games, generate a GitHub Personal Access Token (PAT) with at least 
@@ -52,7 +56,7 @@
     <p><a href="index.html">← Back to Leaderboard</a></p>
   </div>
 
-  <!-- SECTION B: Add Game Form (shown if a token exists) -->
+  <!-- SECTION B: Add Game form (shown if PAT is saved) -->
   <div id="game-form-container" style="display: none;">
     <p>
       <strong>Personal Access Token saved.</strong>
@@ -76,11 +80,11 @@
               type="text" 
               class="player-input" 
               placeholder="Player name…" 
-              data-player-index="0" 
+              data-player-index="0"
+              list="player-names-list"
             />
           </div>
         </div>
-
         <!-- Team 2 -->
         <div class="team-section" data-team-index="1">
           <div class="team-header">Team 2</div>
@@ -89,7 +93,8 @@
               type="text" 
               class="player-input" 
               placeholder="Player name…" 
-              data-player-index="0" 
+              data-player-index="0"
+              list="player-names-list"
             />
           </div>
         </div>
