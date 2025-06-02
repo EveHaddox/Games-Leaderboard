@@ -8,20 +8,21 @@ const RAW_BASE_URL          = `https://raw.githubusercontent.com/${GITHUB_USERNA
 const API_BASE_URL          = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}`;
 
 const GAMES_JSON_PATH       = "games.json";
+const GAME_OPTIONS_PATH     = "gameOptions.json";
 const LOCAL_STORAGE_TOKEN_KEY = "github_access_token"; // stores the PAT in localStorage
 
 
-// ──────────────── UTILITY: Fetch games.json ────────────────
-async function fetchGames() {
-  const url = `${RAW_BASE_URL}/${GAMES_JSON_PATH}?cachebust=${Date.now()}`;
+// ──────────────── UTILITY: Fetch JSON (generic) ────────────────
+async function fetchJSON(path) {
+  const url = `${RAW_BASE_URL}/${path}?cachebust=${Date.now()}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error("Failed to fetch games.json");
+  if (!res.ok) throw new Error(`Failed to fetch ${path}`);
   return await res.json();
 }
 
-// ──────────────── UTILITY: Get file SHA + content ────────────────
-async function getFileSHAandContent() {
-  const endpoint = `${API_BASE_URL}/contents/${GAMES_JSON_PATH}`;
+// ──────────────── UTILITY: Get file SHA + content (generic) ────────────────
+async function getFileSHAandContent(path) {
+  const endpoint = `${API_BASE_URL}/contents/${path}`;
   const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
   const headers = { Accept: "application/vnd.github.v3+json" };
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
@@ -32,24 +33,22 @@ async function getFileSHAandContent() {
   }
   if (!res.ok) {
     const msg = await res.text();
-    throw new Error(`GitHub API error: ${msg}`);
+    throw new Error(`GitHub API error (${path}): ${msg}`);
   }
   const data = await res.json();
   return { sha: data.sha, content: data.content };
 }
 
-// ──────────────── UTILITY: Commit updated games.json ────────────────
-async function commitGames(newGamesArray, commitMessage) {
+// ──────────────── UTILITY: Commit JSON back to GitHub (generic) ────────────────
+async function commitJSON(newArray, path, commitMessage) {
   const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
-  if (!accessToken) {
-    throw new Error("No GitHub token found. Please paste a valid PAT first.");
-  }
+  if (!accessToken) throw new Error(`No GitHub token found. Please paste a valid PAT first.`);
 
-  const { sha, content: oldContentBase64 } = await getFileSHAandContent();
-  const newContentString = JSON.stringify(newGamesArray, null, 2);
+  const { sha, content: oldContentBase64 } = await getFileSHAandContent(path);
+  const newContentString = JSON.stringify(newArray, null, 2);
   const newContentBase64 = btoa(unescape(encodeURIComponent(newContentString)));
 
-  const endpoint = `${API_BASE_URL}/contents/${GAMES_JSON_PATH}`;
+  const endpoint = `${API_BASE_URL}/contents/${path}`;
   const body = {
     message: commitMessage,
     content: newContentBase64,
@@ -69,7 +68,7 @@ async function commitGames(newGamesArray, commitMessage) {
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error("GitHub commit failed: " + errText);
+    throw new Error(`GitHub commit failed (${path}): ${errText}`);
   }
   return await res.json();
 }
@@ -93,10 +92,11 @@ function logout() {
 
 /**
  * On admin.html load:
- * 1. Toggle between login inputs vs. “Leaderboard/Log Out” buttons.
- * 2. Populate autocomplete datalist.
- * 3. Initialize team inputs (including “Remove Team” on team ≥3).
- * 4. Update the “Winning Team” dropdown.
+ * 1. Toggle between login inputs vs. “Leaderboard/Manage Games/Log Out” buttons.
+ * 2. Populate game‐dropdown.
+ * 3. Populate player autocomplete.
+ * 4. Initialize team inputs (including “Remove Team” on team ≥ 2).
+ * 5. Update “Winning Team” dropdown.
  */
 async function onAdminPageLoad() {
   const token = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
@@ -105,9 +105,10 @@ async function onAdminPageLoad() {
     document.getElementById("post-login-buttons").style.display = "flex";
     document.getElementById("game-form-container").style.display = "block";
 
-    await populatePlayerDatalist();
-    initializeTeamInputs();
-    updateWinningTeamOptions();
+    await populateGameDropdown();       // load options into #gameName <select>
+    await populatePlayerDatalist();     // load existing players into <datalist>
+    initializeTeamInputs();             // bind dynamic team/player inputs
+    updateWinningTeamOptions();         // refresh “Winning Team” <select>
   } else {
     document.getElementById("pat-login").style.display = "flex";
     document.getElementById("post-login-buttons").style.display = "none";
@@ -123,7 +124,7 @@ async function populatePlayerDatalist() {
 
   let games;
   try {
-    games = await fetchGames();
+    games = await fetchJSON(GAMES_JSON_PATH);
   } catch (err) {
     console.warn("Could not fetch games for autocomplete:", err);
     return;
@@ -145,6 +146,46 @@ async function populatePlayerDatalist() {
     const option = document.createElement("option");
     option.value = name;
     datalist.appendChild(option);
+  });
+}
+
+
+// ──────────────── GAME DROPDOWN: Populate <select id="gameName"> ────────────────
+async function populateGameDropdown() {
+  const select = document.getElementById("gameName");
+  select.innerHTML = "";
+
+  let options;
+  try {
+    options = await fetchJSON(GAME_OPTIONS_PATH);
+  } catch (err) {
+    console.warn("Could not fetch gameOptions.json:", err);
+    return;
+  }
+
+  // If no options yet, show a placeholder
+  if (options.length === 0) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.innerText = "No games defined";
+    opt.disabled = true;
+    opt.selected = true;
+    select.appendChild(opt);
+    return;
+  }
+
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.innerText = "-- Select Game --";
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  select.appendChild(placeholder);
+
+  options.forEach((gameName) => {
+    const opt = document.createElement("option");
+    opt.value = gameName;
+    opt.innerText = gameName;
+    select.appendChild(opt);
   });
 }
 
@@ -192,12 +233,12 @@ function cleanUpTrailingEmptyInputs(playersListDiv) {
 }
 
 /**
- * Add a new team section (with remove button because index ≥ 2) to #teams-container.
+ * Add a new team section (with remove button) to #teams-container.
  */
 function addNewTeamSection() {
   const teamsContainer = document.getElementById("teams-container");
   const existingTeams = teamsContainer.querySelectorAll(".team-section");
-  const newTeamIndex = existingTeams.length; // 2 → first removable team
+  const newTeamIndex = existingTeams.length; // index ≥ 2 → removable
 
   // Wrapper <div class="team-section" data-team-index="X">
   const teamDiv = document.createElement("div");
@@ -213,7 +254,7 @@ function addNewTeamSection() {
   header.innerText = `Team ${newTeamIndex + 1}`;
   headerContainer.appendChild(header);
 
-  // Remove‐button only for teams ≥ 2
+  // Remove‐button for teams index ≥ 2
   const removeBtn = document.createElement("button");
   removeBtn.className = "remove-team-button";
   removeBtn.innerText = "Remove";
@@ -235,33 +276,32 @@ function addNewTeamSection() {
 
 /**
  * Remove the team section at index `idx`, then re-index all remaining teams,
- * update their headers, and refresh “Winning Team” <select>.
+ * update their headers, and refresh the “Winning Team” <select>.
  */
 function removeTeamSection(idx) {
   const teamsContainer = document.getElementById("teams-container");
-  const teamDivs = Array.from(teamsContainer.querySelectorAll(".team-section"));
+  let teamDivs = Array.from(teamsContainer.querySelectorAll(".team-section"));
 
   // Prevent removing Team 0 or Team 1
   if (idx < 2) return;
 
-  // 1) Remove the specific team‐div
+  // 1) Remove the specified team‐div
   const teamToRemove = teamDivs[idx];
   teamsContainer.removeChild(teamToRemove);
 
   // 2) Re-index all remaining teams
-  const updatedTeamDivs = Array.from(teamsContainer.querySelectorAll(".team-section"));
-  updatedTeamDivs.forEach((div, newIndex) => {
+  teamDivs = Array.from(teamsContainer.querySelectorAll(".team-section"));
+  teamDivs.forEach((div, newIndex) => {
     div.setAttribute("data-team-index", newIndex);
 
     // Update header text
     const headerDiv = div.querySelector(".team-header");
     headerDiv.innerText = `Team ${newIndex + 1}`;
 
-    // If this team now qualifies for a remove‐button (i.e. newIndex ≥ 2)
+    // Manage remove‐button for index ≥ 2
     let removeBtn = div.querySelector(".remove-team-button");
     if (newIndex >= 2) {
       if (!removeBtn) {
-        // Create a new remove button if missing
         removeBtn = document.createElement("button");
         removeBtn.className = "remove-team-button";
         removeBtn.innerText = "Remove";
@@ -269,12 +309,11 @@ function removeTeamSection(idx) {
         div.querySelector(".team-header-container").appendChild(removeBtn);
       } else {
         // Rebind with correct index
-        removeBtn.replaceWith(removeBtn.cloneNode(true));
-        const newRemove = div.querySelector(".remove-team-button");
+        const newRemove = removeBtn.cloneNode(true);
         newRemove.addEventListener("click", () => removeTeamSection(newIndex));
+        removeBtn.replaceWith(newRemove);
       }
     } else {
-      // newIndex < 2 → remove any existing remove‐button
       if (removeBtn) removeBtn.remove();
     }
   });
@@ -348,177 +387,16 @@ function updateWinningTeamOptions() {
 }
 
 
-// ──────────────── LEADERBOARD: Compute stats & render ────────────────
-
-function computePlayerStats(gamesArray) {
-  const stats = new Map();
-
-  function ensurePlayer(name) {
-    if (!stats.has(name)) {
-      stats.set(name, { wins: 0, losses: 0, played: 0 });
-    }
-  }
-
-  gamesArray.forEach((game) => {
-    const winnerIdx = game.winningTeamIndex;
-    game.teams.forEach((teamPlayers, teamIdx) => {
-      const isWinnerTeam = teamIdx === winnerIdx;
-      teamPlayers.forEach((player) => {
-        ensurePlayer(player);
-        const pstats = stats.get(player);
-        pstats.played += 1;
-        if (isWinnerTeam) pstats.wins += 1;
-        else pstats.losses += 1;
-      });
-    });
-  });
-
-  return stats;
-}
-
-async function renderLeaderboard() {
-  let games;
-  try {
-    games = await fetchGames();
-  } catch (err) {
-    document.getElementById("leaderboard").innerText = "Error loading data: " + err;
-    return;
-  }
-
-  const statsMap = computePlayerStats(games);
-  const rows = Array.from(statsMap.entries())
-    .map(([player, s]) => ({ player, ...s }))
-    .sort((a, b) => b.wins - a.wins || b.played - a.played);
-
-  const table = document.createElement("table");
-  const headerRow = document.createElement("tr");
-  ["Player", "Wins", "Losses", "Played"].forEach((heading) => {
-    const th = document.createElement("th");
-    th.innerText = heading;
-    headerRow.appendChild(th);
-  });
-  table.appendChild(headerRow);
-
-  rows.forEach((rowData) => {
-    const tr = document.createElement("tr");
-    const nameCell = document.createElement("td");
-    const a = document.createElement("a");
-    a.href = `player.html?user=${encodeURIComponent(rowData.player)}`;
-    a.innerText = rowData.player;
-    nameCell.appendChild(a);
-    tr.appendChild(nameCell);
-
-    ["wins", "losses", "played"].forEach((field) => {
-      const td = document.createElement("td");
-      td.innerText = rowData[field];
-      tr.appendChild(td);
-    });
-    table.appendChild(tr);
-  });
-
-  const container = document.getElementById("leaderboard");
-  container.innerHTML = "";
-  container.appendChild(table);
-}
-
-
-// ──────────────── PLAYER PAGE: Extract user & render history ────────────────
-
-function getUserFromQuery() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("user");
-}
-
-async function renderPlayerPage() {
-  const player = getUserFromQuery();
-  if (!player) {
-    document.getElementById("player-games").innerText = "No player specified.";
-    return;
-  }
-  document.getElementById("player-name").innerText = player;
-
-  let games;
-  try {
-    games = await fetchGames();
-  } catch (err) {
-    document.getElementById("player-games").innerText = "Error loading data: " + err;
-    return;
-  }
-
-  const filtered = games.filter((game) =>
-    game.teams.some((team) => team.includes(player))
-  );
-
-  if (filtered.length === 0) {
-    document.getElementById("player-games").innerText = `No games found for “${player}”.`;
-    return;
-  }
-
-  const table = document.createElement("table");
-  const headerRow = document.createElement("tr");
-  ["Date/Time", "Game Name", "Team (You + Allies)", "Opponents", "Result"].forEach((h) => {
-    const th = document.createElement("th");
-    th.innerText = h;
-    headerRow.appendChild(th);
-  });
-  table.appendChild(headerRow);
-
-  filtered.forEach((game) => {
-    const tr = document.createElement("tr");
-
-    // Date/Time
-    const dtCell = document.createElement("td");
-    const dt = new Date(game.timestamp);
-    dtCell.innerText = dt.toUTCString().replace(/ GMT$/, "");
-    tr.appendChild(dtCell);
-
-    // Game Name
-    const gnCell = document.createElement("td");
-    gnCell.innerText = game.gameName;
-    tr.appendChild(gnCell);
-
-    // Team (you + allies)
-    const myTeamIdx = game.teams.findIndex((team) => team.includes(player));
-    const myTeam = game.teams[myTeamIdx];
-    const teamCell = document.createElement("td");
-    teamCell.innerText = myTeam.join(", ");
-    tr.appendChild(teamCell);
-
-    // Opponents
-    const opponents = game.teams
-      .filter((_, idx) => idx !== myTeamIdx)
-      .flat();
-    const oppCell = document.createElement("td");
-    oppCell.innerText = opponents.join(", ");
-    tr.appendChild(oppCell);
-
-    // Result
-    const resCell = document.createElement("td");
-    resCell.innerText = (myTeamIdx === game.winningTeamIndex) ? "W" : "L";
-    tr.appendChild(resCell);
-
-    table.appendChild(tr);
-  });
-
-  const container = document.getElementById("player-games");
-  container.innerHTML = "";
-  container.appendChild(table);
-}
-
-
-// ──────────────── ADMIN: Handle “Add Game” submit ────────────────
+// ──────────────── ADD GAME: Handle form submit ────────────────
 async function onAddGameFormSubmit(event) {
   event.preventDefault();
 
   // 1) Read gameName & winningTeamIndex
-  const gameName = document.getElementById("gameName").value.trim();
-  const winningTeamIndex = parseInt(
-    document.getElementById("winningTeam").value,
-    10
-  );
+  const gameName = document.getElementById("gameName").value;
+  const winningTeamIndex = parseInt(document.getElementById("winningTeam").value, 10);
 
   if (!gameName) {
-    alert("Game name cannot be empty.");
+    alert("Please select a game.");
     return;
   }
 
@@ -555,12 +433,12 @@ async function onAddGameFormSubmit(event) {
   };
 
   try {
-    const { sha, content: oldBase64 } = await getFileSHAandContent();
+    const { sha, content: oldBase64 } = await getFileSHAandContent(GAMES_JSON_PATH);
     const oldArray = JSON.parse(atob(oldBase64));
 
     const newArray = oldArray.concat(newGame);
     const commitMsg = `Add game: ${gameName} (winner: Team ${winningTeamIndex + 1})`;
-    await commitGames(newArray, commitMsg);
+    await commitJSON(newArray, GAMES_JSON_PATH, commitMsg);
 
     alert("Game added successfully!");
     window.location.reload();
@@ -580,10 +458,10 @@ function initPage() {
     renderPlayerPage();
   } else if (pageId === "admin") {
     onAdminPageLoad();
-    document.getElementById("save-pat-button").onclick = savePAT;
-    document.getElementById("logout-button").onclick    = logout;
-    document.getElementById("add-team-button").onclick  = addNewTeamSection;
-    document.getElementById("add-game-form").onsubmit  = onAddGameFormSubmit;
+    document.getElementById("save-pat-button").onclick   = savePAT;
+    document.getElementById("logout-button").onclick     = logout;
+    document.getElementById("add-team-button").onclick   = addNewTeamSection;
+    document.getElementById("add-game-form").onsubmit    = onAddGameFormSubmit;
   }
 }
 

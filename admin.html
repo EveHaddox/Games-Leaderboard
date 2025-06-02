@@ -27,7 +27,10 @@
     .header-buttons {
       display: flex;
       align-items: center;
-      gap: 1rem; /* increased spacing */
+    }
+    /* ensure children in header-buttons have at least 2rem between them */
+    .header-buttons > * + * {
+      margin-left: 2rem;
     }
     .header-buttons input[type="password"] {
       max-width: 200px;
@@ -117,6 +120,9 @@
         <a href="index.html">
           <button class="btn-gray">Leaderboard</button>
         </a>
+        <a href="manage_games.html">
+          <button class="btn-gray">Manage Games</button>
+        </a>
         <button id="logout-button" class="btn-red">Log Out</button>
       </div>
     </div>
@@ -127,7 +133,10 @@
     <form id="add-game-form">
       <div class="form-group">
         <label for="gameName"><strong>Game Name:</strong><br />
-          <input type="text" id="gameName" placeholder="e.g. Company of Heroes 2" required />
+          <!-- Changed from <input> to <select>; JS will populate options -->
+          <select id="gameName" required>
+            <option value="" disabled selected>Loading…</option>
+          </select>
         </label>
       </div>
 
@@ -166,7 +175,7 @@
         </div>
       </div>
 
-      <button type="button" id="add-team-button">+ Add Team</button>
+      <button type="button" id="add-team-button" class="btn-gray">+ Add Team</button>
 
       <div class="form-group">
         <label for="winningTeam"><strong>Winning Team:</strong><br />
