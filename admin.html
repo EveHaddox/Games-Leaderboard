@@ -11,16 +11,27 @@
 <body data-page="admin">
   <h1>Admin Panel</h1>
 
-  <!-- If not logged in, show this -->
-  <div id="not-logged-in">
-    <p>To add new games, please log in with GitHub so we can commit to the repo.</p>
-    <button id="login-button">Login with GitHub</button>
+  <!-- SECTION A: Enter Personal Access Token (shown if no token in localStorage) -->
+  <div id="pat-section">
+    <p>
+      To add new games, generate a GitHub Personal Access Token (PAT) with <code>repo</code> scope<br />
+      (Settings → Developer settings → Personal access tokens → Generate new token → check “repo” → Generate).
+    </p>
+    <div class="form-group">
+      <label for="pat-input"><strong>Paste your PAT here:</strong><br />
+        <input type="password" id="pat-input" placeholder="ghp_xxx..." />
+      </label>
+    </div>
+    <button id="save-pat-button">Save Token</button>
     <p><a href="index.html">← Back to Leaderboard</a></p>
   </div>
 
-  <!-- Once logged in, show the form -->
+  <!-- SECTION B: Add Game Form (shown if a token exists) -->
   <div id="game-form-container" style="display: none;">
-    <p>Logged in as <strong id="admin-username"></strong> <button id="logout-button">Logout</button></p>
+    <p>
+      <strong>Personal Access Token saved.</strong>
+      <button id="logout-button">Clear Token &amp; Log Out</button>
+    </p>
 
     <form id="add-game-form">
       <div class="form-group">
@@ -31,7 +42,7 @@
 
       <div class="form-group">
         <label for="teams"><strong>Teams (one line per team; players separated by commas)</strong><br />
-          <textarea id="teams" rows="4" placeholder="team 1: alice, bob, charlie&#10;team 2: david, eve" required></textarea>
+          <textarea id="teams" rows="4" placeholder="alice, bob, charlie&#10;david, eve" required></textarea>
         </label>
       </div>
 
@@ -40,10 +51,11 @@
           <select id="winningTeam" required>
             <option value="0">Team 1</option>
             <option value="1">Team 2</option>
-            <!-- JS can add more options dynamically if we want >2 teams, but for simplicity, let the admin manually edit index if >2 teams -->
+            <!-- If you plan to frequently have more than 2 teams, 
+                 you can manually add <option value="2">Team 3</option>, etc. -->
           </select>
         </label>
-        <small>If you have more than two teams, type the correct index here (e.g. “2” for third line).</small>
+        <small>If you have ≥3 teams, set this to the correct index (e.g. “2” for the third line).</small>
       </div>
 
       <input type="submit" value="Add Game" />
@@ -53,33 +65,6 @@
     <div id="admin-error" class="error"></div>
   </div>
 
-  <script>
-    // A tiny bit of inline JS just to show the GitHub username (optional).
-    // Once logged in, we can call “GET https://api.github.com/user” to fetch the username.
-    async function displayAdminUsername() {
-      const token = localStorage.getItem("github_access_token");
-      if (!token) return;
-      try {
-        const res = await fetch("https://api.github.com/user", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/vnd.github.v3+json"
-          }
-        });
-        if (!res.ok) throw new Error("Failed to fetch user");
-        const { login } = await res.json();
-        document.getElementById("admin-username").innerText = login;
-      } catch (err) {
-        console.warn("Could not fetch username:", err);
-      }
-    }
-
-    // Call it when admin is logged in
-    document.addEventListener("DOMContentLoaded", () => {
-      const token = localStorage.getItem("github_access_token");
-      if (token) displayAdminUsername();
-    });
-  </script>
   <script src="scripts.js"></script>
 </body>
 </html>
