@@ -1,15 +1,17 @@
+// scripts.js
+
 // ──────────────── CONFIGURATION ────────────────
-const GITHUB_USERNAME = "EveHaddox";
-const REPO_NAME       = "Games-Leaderboard";
+const GITHUB_USERNAME       = "EveHaddox";
+const REPO_NAME             = "Games-Leaderboard";
 
-const RAW_BASE_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main`;
-const API_BASE_URL = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}`;
+const RAW_BASE_URL          = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main`;
+const API_BASE_URL          = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}`;
 
-const GAMES_JSON_PATH      = "games.json";
-const LOCAL_STORAGE_TOKEN_KEY = "github_access_token";
+const GAMES_JSON_PATH       = "games.json";
+const LOCAL_STORAGE_TOKEN_KEY = "github_access_token"; // stores the PAT in localStorage
 
 
-// ──────────────── UTILITY: GitHub file fetch & commit ────────────────
+// ──────────────── UTILITY: Fetch games.json ────────────────
 async function fetchGames() {
   const url = `${RAW_BASE_URL}/${GAMES_JSON_PATH}?cachebust=${Date.now()}`;
   const res = await fetch(url);
@@ -17,6 +19,7 @@ async function fetchGames() {
   return await res.json();
 }
 
+// ──────────────── UTILITY: Get file SHA + content ────────────────
 async function getFileSHAandContent() {
   const endpoint = `${API_BASE_URL}/contents/${GAMES_JSON_PATH}`;
   const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
@@ -24,7 +27,9 @@ async function getFileSHAandContent() {
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
   const res = await fetch(endpoint, { headers });
-  if (res.status === 404) return { sha: null, content: btoa("[]") };
+  if (res.status === 404) {
+    return { sha: null, content: btoa("[]") };
+  }
   if (!res.ok) {
     const msg = await res.text();
     throw new Error(`GitHub API error: ${msg}`);
@@ -33,9 +38,13 @@ async function getFileSHAandContent() {
   return { sha: data.sha, content: data.content };
 }
 
+// ──────────────── UTILITY: Commit updated games.json ────────────────
 async function commitGames(newGamesArray, commitMessage) {
   const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
-  if (!accessToken) throw new Error("No GitHub token found.");
+  if (!accessToken) {
+    throw new Error("No GitHub token found. Please paste a valid PAT first.");
+  }
+
   const { sha, content: oldBase64 } = await getFileSHAandContent();
   const newContentString = JSON.stringify(newGamesArray, null, 2);
   const newContentBase64 = btoa(unescape(encodeURIComponent(newContentString)));
@@ -47,6 +56,7 @@ async function commitGames(newGamesArray, commitMessage) {
     ...(sha ? { sha } : {}),
     branch: "main"
   };
+
   const res = await fetch(endpoint, {
     method: "PUT",
     headers: {
@@ -56,6 +66,7 @@ async function commitGames(newGamesArray, commitMessage) {
     },
     body: JSON.stringify(body)
   });
+
   if (!res.ok) {
     const errText = await res.text();
     throw new Error("GitHub commit failed: " + errText);
@@ -66,7 +77,6 @@ async function commitGames(newGamesArray, commitMessage) {
 
 // ──────────────── ADMIN: PAT-based login ────────────────
 function savePAT() {
-  console.log("savePAT() called"); // for debugging
   const pat = document.getElementById("pat-input").value.trim();
   if (!pat) {
     alert("Token cannot be empty.");
@@ -82,14 +92,16 @@ function logout() {
 }
 
 /**
- * On admin page load, show PAT input if no token.
- * Otherwise show the “Add Game” form.
+ * On admin.html load: Show the PAT-input section if no token.
+ * Otherwise show the “Add Game” form and initialize dynamic team/player logic.
  */
 function onAdminPageLoad() {
   const token = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
   if (token) {
     document.getElementById("pat-section").style.display = "none";
     document.getElementById("game-form-container").style.display = "block";
+    initializeTeamInputs();
+    updateWinningTeamOptions();
   } else {
     document.getElementById("pat-section").style.display = "block";
     document.getElementById("game-form-container").style.display = "none";
@@ -97,17 +109,141 @@ function onAdminPageLoad() {
 }
 
 
-// ──────────────── LEADERBOARD & PLAYER PAGE LOGIC ────────────────
+// ──────────────── DYNAMIC TEAM/PLAYER INPUT LOGIC ────────────────
+
+/**
+ * Add a new blank player input inside a given team’s .players-list.
+ * @param {HTMLElement} playersListDiv – The <div class="players-list"> for that team.
+ */
+function appendPlayerInput(playersListDiv) {
+  // Count existing inputs to set data-player-index
+  const existingInputs = playersListDiv.querySelectorAll(".player-input");
+  const newIndex = existingInputs.length;
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "player-input";
+  input.placeholder = "Player name…";
+  input.setAttribute("data-player-index", newIndex);
+
+  // Whenever someone types into the last input, automatically append another one
+  input.addEventListener("input", () => {
+    // If this input is the last one in playersListDiv and is non-empty, add a new blank input
+    const allInputs = playersListDiv.querySelectorAll(".player-input");
+    const lastInput = allInputs[allInputs.length - 1];
+    if (input === lastInput && input.value.trim() !== "") {
+      appendPlayerInput(playersListDiv);
+    }
+  });
+
+  playersListDiv.appendChild(input);
+}
+
+/**
+ * Add a brand-new team section to #teams-container (with correct data-team-index).
+ */
+function addNewTeamSection() {
+  const teamsContainer = document.getElementById("teams-container");
+  const existingTeams = teamsContainer.querySelectorAll(".team-section");
+  const newTeamIndex = existingTeams.length; // e.g. if 2 teams exist, new index = 2
+
+  // Create the wrapper <div class="team-section" data-team-index="X">
+  const teamDiv = document.createElement("div");
+  teamDiv.className = "team-section";
+  teamDiv.setAttribute("data-team-index", newTeamIndex);
+
+  // Header: “Team N”
+  const header = document.createElement("div");
+  header.className = "team-header";
+  header.innerText = `Team ${newTeamIndex + 1}`;
+  teamDiv.appendChild(header);
+
+  // The .players-list container
+  const playersListDiv = document.createElement("div");
+  playersListDiv.className = "players-list";
+  teamDiv.appendChild(playersListDiv);
+
+  // Add the first player input
+  appendPlayerInput(playersListDiv);
+
+  // Append the new teamDiv to the container
+  teamsContainer.appendChild(teamDiv);
+
+  // Update the “Winning Team” <select> to reflect the new count
+  updateWinningTeamOptions();
+}
+
+/**
+ * Go through all current .team-section elements, ensure each .players-list
+ * has at least one blank input, and bind the input‐event logic to existing inputs.
+ */
+function initializeTeamInputs() {
+  const teamsContainer = document.getElementById("teams-container");
+  const teamDivs = teamsContainer.querySelectorAll(".team-section");
+
+  teamDivs.forEach((teamDiv) => {
+    const playersListDiv = teamDiv.querySelector(".players-list");
+
+    // If no player-input exists at all, create one
+    if (!playersListDiv.querySelector(".player-input")) {
+      appendPlayerInput(playersListDiv);
+    }
+
+    // Otherwise, ensure the “last input → adds new one if non-empty” logic is bound
+    const inputs = playersListDiv.querySelectorAll(".player-input");
+    inputs.forEach((input, idx) => {
+      // Avoid rebinding if already has a listener
+      if (!input.dataset.bound) {
+        input.addEventListener("input", () => {
+          const allInputs = playersListDiv.querySelectorAll(".player-input");
+          const lastInput = allInputs[allInputs.length - 1];
+          if (input === lastInput && input.value.trim() !== "") {
+            appendPlayerInput(playersListDiv);
+          }
+        });
+        input.setAttribute("data-bound", "true");
+      }
+    });
+  });
+}
+
+/**
+ * Rebuild the “Winning Team” <select> options so they match the current
+ * number of teams in #teams-container. Each option’s value = team index.
+ */
+function updateWinningTeamOptions() {
+  const select = document.getElementById("winningTeam");
+  const teamsContainer = document.getElementById("teams-container");
+  const teamCount = teamsContainer.querySelectorAll(".team-section").length;
+
+  // Clear out old options
+  select.innerHTML = "";
+
+  // Create new options: “Team 1” → value="0", “Team 2” → value="1", etc.
+  for (let i = 0; i < teamCount; i++) {
+    const opt = document.createElement("option");
+    opt.value = i.toString();
+    opt.innerText = `Team ${i + 1}`;
+    select.appendChild(opt);
+  }
+}
+
+
+// ──────────────── LEADERBOARD: Compute stats & render ────────────────
 
 function computePlayerStats(gamesArray) {
   const stats = new Map();
+
   function ensurePlayer(name) {
-    if (!stats.has(name)) stats.set(name, { wins: 0, losses: 0, played: 0 });
+    if (!stats.has(name)) {
+      stats.set(name, { wins: 0, losses: 0, played: 0 });
+    }
   }
+
   gamesArray.forEach((game) => {
     const winnerIdx = game.winningTeamIndex;
     game.teams.forEach((teamPlayers, teamIdx) => {
-      const isWinnerTeam = teamIdx === winnerIdx;
+      const isWinnerTeam = (teamIdx === winnerIdx);
       teamPlayers.forEach((player) => {
         ensurePlayer(player);
         const pstats = stats.get(player);
@@ -117,6 +253,7 @@ function computePlayerStats(gamesArray) {
       });
     });
   });
+
   return stats;
 }
 
@@ -128,6 +265,7 @@ async function renderLeaderboard() {
     document.getElementById("leaderboard").innerText = "Error loading data: " + err;
     return;
   }
+
   const statsMap = computePlayerStats(games);
   const rows = Array.from(statsMap.entries())
     .map(([player, s]) => ({ player, ...s }))
@@ -163,6 +301,9 @@ async function renderLeaderboard() {
   container.innerHTML = "";
   container.appendChild(table);
 }
+
+
+// ──────────────── PLAYER PAGE: Extract user & render history ────────────────
 
 function getUserFromQuery() {
   const params = new URLSearchParams(window.location.search);
@@ -207,21 +348,25 @@ async function renderPlayerPage() {
   filtered.forEach((game) => {
     const tr = document.createElement("tr");
 
+    // Date/Time
     const dtCell = document.createElement("td");
     const dt = new Date(game.timestamp);
     dtCell.innerText = dt.toUTCString().replace(/ GMT$/, "");
     tr.appendChild(dtCell);
 
+    // Game Name
     const gnCell = document.createElement("td");
     gnCell.innerText = game.gameName;
     tr.appendChild(gnCell);
 
+    // Team (you + allies)
     const myTeamIdx = game.teams.findIndex((team) => team.includes(player));
     const myTeam = game.teams[myTeamIdx];
     const teamCell = document.createElement("td");
     teamCell.innerText = myTeam.join(", ");
     tr.appendChild(teamCell);
 
+    // Opponents
     const opponents = game.teams
       .filter((_, idx) => idx !== myTeamIdx)
       .flat();
@@ -229,6 +374,7 @@ async function renderPlayerPage() {
     oppCell.innerText = opponents.join(", ");
     tr.appendChild(oppCell);
 
+    // Result
     const resCell = document.createElement("td");
     resCell.innerText = (myTeamIdx === game.winningTeamIndex) ? "W" : "L";
     tr.appendChild(resCell);
@@ -242,37 +388,47 @@ async function renderPlayerPage() {
 }
 
 
-// ──────────────── ADMIN: Add‐Game form handler ────────────────
+// ──────────────── ADMIN: Handle “Add Game” submit ────────────────
 async function onAddGameFormSubmit(event) {
   event.preventDefault();
 
+  // 1) Read gameName & winningTeamIndex
   const gameName = document.getElementById("gameName").value.trim();
   const winningTeamIndex = parseInt(
     document.getElementById("winningTeam").value,
     10
   );
 
-  const teamsRaw = document.getElementById("teams").value.trim().split("\n");
-  const teams = teamsRaw.map((line) =>
-    line
-      .split(",")
-      .map((p) => p.trim())
-      .filter((p) => p !== "")
-  );
+  if (!gameName) {
+    alert("Game name cannot be empty.");
+    return;
+  }
+
+  // 2) Gather teams: for each .team-section, collect non-empty player names
+  const teamsContainer = document.getElementById("teams-container");
+  const teamDivs = teamsContainer.querySelectorAll(".team-section");
+  const teams = [];
+
+  teamDivs.forEach((teamDiv) => {
+    const playerInputs = teamDiv.querySelectorAll(".player-input");
+    const names = Array.from(playerInputs)
+      .map((inp) => inp.value.trim())
+      .filter((n) => n !== "");
+    if (names.length > 0) {
+      teams.push(names);
+    }
+  });
 
   if (teams.length < 2) {
-    alert("You must specify at least two teams (one per line).");
+    alert("Please enter at least two teams, each with at least one player.");
     return;
   }
   if (winningTeamIndex < 0 || winningTeamIndex >= teams.length) {
     alert("Invalid winning team index.");
     return;
   }
-  if (gameName === "") {
-    alert("Game name cannot be empty.");
-    return;
-  }
 
+  // 3) Build the new game object
   const newGame = {
     timestamp: new Date().toISOString(),
     gameName,
@@ -280,6 +436,7 @@ async function onAddGameFormSubmit(event) {
     winningTeamIndex
   };
 
+  // 4) Fetch existing games + commit the new one
   try {
     const { sha, content: oldBase64 } = await getFileSHAandContent();
     const oldArray = JSON.parse(atob(oldBase64));
@@ -308,6 +465,7 @@ function initPage() {
     onAdminPageLoad();
     document.getElementById("save-pat-button").onclick = savePAT;
     document.getElementById("logout-button").onclick    = logout;
+    document.getElementById("add-team-button").onclick  = addNewTeamSection;
     document.getElementById("add-game-form").onsubmit  = onAddGameFormSubmit;
   }
 }

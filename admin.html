@@ -1,57 +1,115 @@
+<!-- admin.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Panel</title>
+  <title>Admin Panel – Game Tracker</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    /* A little extra CSS just for the dynamic team/player inputs */
+    .team-section {
+      border: 1px solid #ccc;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 4px;
+      background: #fff;
+    }
+    .team-header {
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+    .player-input {
+      display: block;
+      margin-bottom: 0.5rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #add-team-button {
+      margin-top: 0.5rem;
+      margin-bottom: 1rem;
+    }
+  </style>
 </head>
 <body data-page="admin">
   <h1>Admin Panel</h1>
 
-  <!-- PAT Input Section -->
+  <!-- SECTION A: Enter Personal Access Token (shown if no token in localStorage) -->
   <div id="pat-section">
     <p>
-      Generate a Personal Access Token (classic) with <code>repo</code> (or <code>public_repo</code>) scope in your GitHub account settings.<br />
+      To add new games, generate a GitHub Personal Access Token (PAT) with at least 
+      <code>public_repo</code> (if this repo is public) or <code>repo</code> (if you might make it private)
+      scope in your GitHub account settings.<br />
       Then paste it here:
     </p>
     <div class="form-group">
       <label for="pat-input"><strong>Personal Access Token:</strong><br />
-        <input type="password" id="pat-input" placeholder="ghp_..." />
+        <input type="password" id="pat-input" placeholder="ghp_xxx..." />
       </label>
     </div>
     <button id="save-pat-button">Save Token</button>
     <p><a href="index.html">← Back to Leaderboard</a></p>
   </div>
 
-  <!-- Add Game Form (hidden until PAT is saved) -->
+  <!-- SECTION B: Add Game Form (shown if a token exists) -->
   <div id="game-form-container" style="display: none;">
     <p>
-      <strong>Personal Access Token stored.</strong>
+      <strong>Personal Access Token saved.</strong>
       <button id="logout-button">Clear Token &amp; Log Out</button>
     </p>
+
     <form id="add-game-form">
       <div class="form-group">
         <label for="gameName"><strong>Game Name:</strong><br />
           <input type="text" id="gameName" placeholder="e.g. Company of Heroes 2" required />
         </label>
       </div>
-      <div class="form-group">
-        <label for="teams"><strong>Teams (one line per team; comma-separated)</strong><br />
-          <textarea id="teams" rows="4" placeholder="alice, bob, charlie&#10;david, eve" required></textarea>
-        </label>
+
+      <!-- TEAMS CONTAINER: initially two preset teams -->
+      <div id="teams-container">
+        <!-- Team 1 -->
+        <div class="team-section" data-team-index="0">
+          <div class="team-header">Team 1</div>
+          <div class="players-list">
+            <input 
+              type="text" 
+              class="player-input" 
+              placeholder="Player name…" 
+              data-player-index="0" 
+            />
+          </div>
+        </div>
+
+        <!-- Team 2 -->
+        <div class="team-section" data-team-index="1">
+          <div class="team-header">Team 2</div>
+          <div class="players-list">
+            <input 
+              type="text" 
+              class="player-input" 
+              placeholder="Player name…" 
+              data-player-index="0" 
+            />
+          </div>
+        </div>
       </div>
+
+      <button type="button" id="add-team-button">+ Add Team</button>
+
       <div class="form-group">
-        <label for="winningTeam"><strong>Winning Team (0 = first line, 1 = second line, etc.)</strong><br />
+        <label for="winningTeam"><strong>Winning Team:</strong><br />
           <select id="winningTeam" required>
             <option value="0">Team 1</option>
             <option value="1">Team 2</option>
           </select>
         </label>
-        <small>If you have more than two teams, manually type the correct index (e.g. “2” for a third line).</small>
+        <small>This list updates automatically as you add teams.</small>
       </div>
+
       <input type="submit" value="Add Game" />
     </form>
+
     <p><a href="index.html">← Back to Leaderboard</a></p>
     <div id="admin-error" class="error"></div>
   </div>
