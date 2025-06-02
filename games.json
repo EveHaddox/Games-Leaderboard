@@ -14,5 +14,21 @@
       ]
     ],
     "winningTeamIndex": 0
+  },
+  {
+    "timestamp": "2025-06-02T22:19:25.704Z",
+    "gameName": "Susnis",
+    "teams": [
+      [
+        "Eve"
+      ],
+      [
+        "Drozd"
+      ],
+      [
+        "Donat"
+      ]
+    ],
+    "winningTeamIndex": 2
   }
 ]
