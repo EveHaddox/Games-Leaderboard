@@ -5,7 +5,7 @@
 // 1. Replace these placeholders:
 const GITHUB_USERNAME = "EveHaddox";
 const REPO_NAME       = "Games-Leaderboard";
-const OAUTH_CLIENT_ID = "<YOUR-OAUTH-CLIENT-ID>";
+const OAUTH_CLIENT_ID = "Ov23liFx7WcNWUIEpd7X";
 
 // 2. Derive some constants:
 const RAW_BASE_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main`;
