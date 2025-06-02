@@ -1,25 +1,15 @@
-// scripts.js
-
 // ──────────────── CONFIGURATION ────────────────
-
-// 1. Put your exact GitHub username and repo name here (do NOT change these to placeholders!)
 const GITHUB_USERNAME = "EveHaddox";
 const REPO_NAME       = "Games-Leaderboard";
 
-// 2. Derive the raw + API base URLs from the above
 const RAW_BASE_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main`;
 const API_BASE_URL = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}`;
 
 const GAMES_JSON_PATH      = "games.json";
-const LOCAL_STORAGE_TOKEN_KEY = "github_access_token"; // key under which we store the PAT
+const LOCAL_STORAGE_TOKEN_KEY = "github_access_token";
 
 
-// ──────────────── UTILITY: Fetch the current games.json ────────────────
-
-/**
- * Fetch the raw games.json (as JSON) from raw.githubusercontent.com
- * @returns {Promise<Array>}  Resolves to an array of game objects.
- */
+// ──────────────── UTILITY: GitHub file fetch & commit ────────────────
 async function fetchGames() {
   const url = `${RAW_BASE_URL}/${GAMES_JSON_PATH}?cachebust=${Date.now()}`;
   const res = await fetch(url);
@@ -27,73 +17,36 @@ async function fetchGames() {
   return await res.json();
 }
 
-
-// ──────────────── UTILITY: Fetch the file SHA and content via GitHub API ────────────────
-
-/**
- * Fetches the file metadata (SHA and Base64 content) from GitHub API
- * @returns {Promise<{ sha: string|null, content: string }>}
- */
 async function getFileSHAandContent() {
   const endpoint = `${API_BASE_URL}/contents/${GAMES_JSON_PATH}`;
   const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
   const headers = { Accept: "application/vnd.github.v3+json" };
-  if (accessToken) {
-    headers.Authorization = `Bearer ${accessToken}`;
-  }
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
   const res = await fetch(endpoint, { headers });
-  if (res.status === 404) {
-    // If the file doesn’t exist yet, return an empty array and null SHA
-    return { sha: null, content: btoa("[]") };
-  }
+  if (res.status === 404) return { sha: null, content: btoa("[]") };
   if (!res.ok) {
     const msg = await res.text();
     throw new Error(`GitHub API error: ${msg}`);
   }
   const data = await res.json();
-  return {
-    sha: data.sha,
-    content: data.content // Base64‐encoded
-  };
+  return { sha: data.sha, content: data.content };
 }
 
-
-// ──────────────── UTILITY: Commit updated games.json back to GitHub ────────────────
-
-/**
- * Updates games.json by committing `newGamesArray` to the repo.
- * The PAT must already be in localStorage under LOCAL_STORAGE_TOKEN_KEY.
- *
- * @param {Array}  newGamesArray  JavaScript array of game objects (JSON‐stringified inside).
- * @param {string} commitMessage  The commit message to use.
- */
 async function commitGames(newGamesArray, commitMessage) {
   const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
-  if (!accessToken) {
-    throw new Error("No GitHub token found. Please paste a valid PAT first.");
-  }
-
-  // 1. Get existing SHA & content
-  const { sha, content: oldContentBase64 } = await getFileSHAandContent();
-  // (We don’t strictly need oldGames, but we decode it for sanity.)
-  const oldGames = JSON.parse(atob(oldContentBase64));
-
-  // 2. Prepare the updated content
+  if (!accessToken) throw new Error("No GitHub token found.");
+  const { sha, content: oldBase64 } = await getFileSHAandContent();
   const newContentString = JSON.stringify(newGamesArray, null, 2);
-  // GitHub requires Base64‐encoded, UTF‐8-safe
   const newContentBase64 = btoa(unescape(encodeURIComponent(newContentString)));
 
-  // 3. PUT to GitHub API
   const endpoint = `${API_BASE_URL}/contents/${GAMES_JSON_PATH}`;
   const body = {
     message: commitMessage,
     content: newContentBase64,
-    // if sha === null, omit it so GitHub creates the file; otherwise it updates
     ...(sha ? { sha } : {}),
     branch: "main"
   };
-
   const res = await fetch(endpoint, {
     method: "PUT",
     headers: {
@@ -103,7 +56,6 @@ async function commitGames(newGamesArray, commitMessage) {
     },
     body: JSON.stringify(body)
   });
-
   if (!res.ok) {
     const errText = await res.text();
     throw new Error("GitHub commit failed: " + errText);
@@ -112,12 +64,9 @@ async function commitGames(newGamesArray, commitMessage) {
 }
 
 
-// ──────────────── ADMIN: PAT-based login (no OAuth) ────────────────
-
-/**
- * Called when the admin clicks "Save Token". Stores the PAT in localStorage and reloads.
- */
+// ──────────────── ADMIN: PAT-based login ────────────────
 function savePAT() {
+  console.log("savePAT() called"); // for debugging
   const pat = document.getElementById("pat-input").value.trim();
   if (!pat) {
     alert("Token cannot be empty.");
@@ -127,18 +76,14 @@ function savePAT() {
   window.location.reload();
 }
 
-/**
- * Clears the stored PAT and reloads (logs out).
- */
 function logout() {
   localStorage.removeItem(LOCAL_STORAGE_TOKEN_KEY);
   window.location.reload();
 }
 
 /**
- * On admin.html load:
- * - If a PAT is already in localStorage, hide the PAT‐input section and show the game form.
- * - Otherwise, show just the PAT‐input box.
+ * On admin page load, show PAT input if no token.
+ * Otherwise show the “Add Game” form.
  */
 function onAdminPageLoad() {
   const token = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
@@ -152,46 +97,29 @@ function onAdminPageLoad() {
 }
 
 
-// ──────────────── LEADERBOARD: Compute stats and render ────────────────
+// ──────────────── LEADERBOARD & PLAYER PAGE LOGIC ────────────────
 
-/**
- * Given an array of game objects, compute a Map of player → stats (wins, losses, played).
- * @param {Array} gamesArray
- * @returns {Map<string, { wins: number, losses: number, played: number }>}
- */
 function computePlayerStats(gamesArray) {
   const stats = new Map();
-
   function ensurePlayer(name) {
-    if (!stats.has(name)) {
-      stats.set(name, { wins: 0, losses: 0, played: 0 });
-    }
+    if (!stats.has(name)) stats.set(name, { wins: 0, losses: 0, played: 0 });
   }
-
   gamesArray.forEach((game) => {
     const winnerIdx = game.winningTeamIndex;
     game.teams.forEach((teamPlayers, teamIdx) => {
-      const isWinnerTeam = (teamIdx === winnerIdx);
+      const isWinnerTeam = teamIdx === winnerIdx;
       teamPlayers.forEach((player) => {
         ensurePlayer(player);
         const pstats = stats.get(player);
         pstats.played += 1;
-        if (isWinnerTeam) {
-          pstats.wins += 1;
-        } else {
-          pstats.losses += 1;
-        }
+        if (isWinnerTeam) pstats.wins += 1;
+        else pstats.losses += 1;
       });
     });
   });
-
   return stats;
 }
 
-
-/**
- * Renders the leaderboard table inside <div id="leaderboard"></div>
- */
 async function renderLeaderboard() {
   let games;
   try {
@@ -200,7 +128,6 @@ async function renderLeaderboard() {
     document.getElementById("leaderboard").innerText = "Error loading data: " + err;
     return;
   }
-
   const statsMap = computePlayerStats(games);
   const rows = Array.from(statsMap.entries())
     .map(([player, s]) => ({ player, ...s }))
@@ -237,20 +164,11 @@ async function renderLeaderboard() {
   container.appendChild(table);
 }
 
-
-// ──────────────── PLAYER PAGE: Extract user from URL, render their games ────────────────
-
-/**
- * Reads “?user=...” from URL and returns it (or null if missing).
- */
 function getUserFromQuery() {
   const params = new URLSearchParams(window.location.search);
   return params.get("user");
 }
 
-/**
- * Renders a given player’s game history inside <div id="player-games"></div>
- */
 async function renderPlayerPage() {
   const player = getUserFromQuery();
   if (!player) {
@@ -267,7 +185,6 @@ async function renderPlayerPage() {
     return;
   }
 
-  // Filter games where this player appears in any team
   const filtered = games.filter((game) =>
     game.teams.some((team) => team.includes(player))
   );
@@ -290,25 +207,21 @@ async function renderPlayerPage() {
   filtered.forEach((game) => {
     const tr = document.createElement("tr");
 
-    // 1) Date/Time
     const dtCell = document.createElement("td");
     const dt = new Date(game.timestamp);
     dtCell.innerText = dt.toUTCString().replace(/ GMT$/, "");
     tr.appendChild(dtCell);
 
-    // 2) Game Name
     const gnCell = document.createElement("td");
     gnCell.innerText = game.gameName;
     tr.appendChild(gnCell);
 
-    // 3) Team (you + allies)
     const myTeamIdx = game.teams.findIndex((team) => team.includes(player));
     const myTeam = game.teams[myTeamIdx];
     const teamCell = document.createElement("td");
     teamCell.innerText = myTeam.join(", ");
     tr.appendChild(teamCell);
 
-    // 4) Opponents (flatten all other teams)
     const opponents = game.teams
       .filter((_, idx) => idx !== myTeamIdx)
       .flat();
@@ -316,7 +229,6 @@ async function renderPlayerPage() {
     oppCell.innerText = opponents.join(", ");
     tr.appendChild(oppCell);
 
-    // 5) Result
     const resCell = document.createElement("td");
     resCell.innerText = (myTeamIdx === game.winningTeamIndex) ? "W" : "L";
     tr.appendChild(resCell);
@@ -330,23 +242,16 @@ async function renderPlayerPage() {
 }
 
 
-// ──────────────── ADMIN: Handle “Add Game” form submission ────────────────
-
-/**
- * Called when admin submits the “Add Game” form.
- * Gathers form data, builds a new game object, appends to existing array, then commits via API.
- */
+// ──────────────── ADMIN: Add‐Game form handler ────────────────
 async function onAddGameFormSubmit(event) {
   event.preventDefault();
 
-  // 1) Gather form values
   const gameName = document.getElementById("gameName").value.trim();
   const winningTeamIndex = parseInt(
     document.getElementById("winningTeam").value,
     10
   );
 
-  // Teams are entered one line per team, comma-separated players
   const teamsRaw = document.getElementById("teams").value.trim().split("\n");
   const teams = teamsRaw.map((line) =>
     line
@@ -368,7 +273,6 @@ async function onAddGameFormSubmit(event) {
     return;
   }
 
-  // Build the new game object
   const newGame = {
     timestamp: new Date().toISOString(),
     gameName,
@@ -376,7 +280,6 @@ async function onAddGameFormSubmit(event) {
     winningTeamIndex
   };
 
-  // 2) Fetch existing games, append, and commit
   try {
     const { sha, content: oldBase64 } = await getFileSHAandContent();
     const oldArray = JSON.parse(atob(oldBase64));
@@ -395,12 +298,8 @@ async function onAddGameFormSubmit(event) {
 
 
 // ──────────────── ON-LOAD BINDINGS ────────────────
-
-/**
- * Call this in each page’s <script> section to initialize that page.
- */
 function initPage() {
-  const pageId = document.body.dataset.page; // e.g. “index”, “player”, “admin”
+  const pageId = document.body.dataset.page;
   if (pageId === "index") {
     renderLeaderboard();
   } else if (pageId === "player") {
