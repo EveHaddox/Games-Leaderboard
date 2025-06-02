@@ -8,7 +8,7 @@ const RAW_BASE_URL          = `https://raw.githubusercontent.com/${GITHUB_USERNA
 const API_BASE_URL          = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}`;
 
 const GAMES_JSON_PATH       = "games.json";
-const LOCAL_STORAGE_TOKEN_KEY = "github_access_token"; // stores the PAT under this key
+const LOCAL_STORAGE_TOKEN_KEY = "github_access_token"; // stores the PAT in localStorage
 
 
 // ──────────────── UTILITY: Fetch games.json ────────────────
@@ -28,7 +28,6 @@ async function getFileSHAandContent() {
 
   const res = await fetch(endpoint, { headers });
   if (res.status === 404) {
-    // If file doesn’t exist yet, return empty array + null SHA
     return { sha: null, content: btoa("[]") };
   }
   if (!res.ok) {
@@ -94,25 +93,24 @@ function logout() {
 
 /**
  * On admin.html load:
- * 1. If no PAT saved, show the PAT‐input section.
- * 2. Otherwise, show the Add Game form, populate datalist, and bind dynamic inputs.
+ * 1. Toggle between login inputs vs. “Leaderboard/Log Out” buttons.
+ * 2. Populate autocomplete datalist.
+ * 3. Initialize team inputs (including “Remove Team” on team ≥3).
+ * 4. Update the “Winning Team” dropdown.
  */
 async function onAdminPageLoad() {
   const token = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
   if (token) {
-    document.getElementById("pat-section").style.display = "none";
+    document.getElementById("pat-login").style.display = "none";
+    document.getElementById("post-login-buttons").style.display = "flex";
     document.getElementById("game-form-container").style.display = "block";
 
-    // 1. Populate autocomplete datalist from existing games.json
     await populatePlayerDatalist();
-
-    // 2. Initialize (and bind) dynamic team/player inputs
     initializeTeamInputs();
-
-    // 3. Update the Winning Team <select> based on current team count
     updateWinningTeamOptions();
   } else {
-    document.getElementById("pat-section").style.display = "block";
+    document.getElementById("pat-login").style.display = "flex";
+    document.getElementById("post-login-buttons").style.display = "none";
     document.getElementById("game-form-container").style.display = "none";
   }
 }
@@ -121,7 +119,7 @@ async function onAdminPageLoad() {
 // ──────────────── AUTOCOMPLETE: Populate <datalist> from existing players ────────────────
 async function populatePlayerDatalist() {
   const datalist = document.getElementById("player-names-list");
-  datalist.innerHTML = ""; // clear any old options
+  datalist.innerHTML = "";
 
   let games;
   try {
@@ -139,7 +137,6 @@ async function populatePlayerDatalist() {
     });
   });
 
-  // Sort alphabetically
   const sortedNames = Array.from(nameSet).sort((a, b) =>
     a.toLowerCase().localeCompare(b.toLowerCase())
   );
@@ -156,7 +153,7 @@ async function populatePlayerDatalist() {
 
 /**
  * Create a new <input class="player-input" list="player-names-list"> inside playersListDiv,
- * bind its events, and ensure trailing‐empty cleanup logic.
+ * bind its events (append new blank + cleanup), and append.
  */
 function appendPlayerInput(playersListDiv) {
   const input = document.createElement("input");
@@ -165,17 +162,13 @@ function appendPlayerInput(playersListDiv) {
   input.placeholder = "Player name…";
   input.setAttribute("list", "player-names-list");
 
-  // Event: on input → if this is the last non-empty, append a new blank; then clean up trailing empties
   input.addEventListener("input", () => {
     const allInputs = playersListDiv.querySelectorAll(".player-input");
     const lastInput = allInputs[allInputs.length - 1];
 
-    // 1) If this input is last AND non-empty, append a new blank one
     if (input === lastInput && input.value.trim() !== "") {
       appendPlayerInput(playersListDiv);
     }
-
-    // 2) Remove extra trailing empty inputs: while the last two are both empty, remove the last
     cleanUpTrailingEmptyInputs(playersListDiv);
   });
 
@@ -183,17 +176,10 @@ function appendPlayerInput(playersListDiv) {
 }
 
 /**
- * After any input event, ensure only one trailing empty input remains.
- * If the last two inputs are both empty, remove the last, repeat until only one empty is left.
+ * Remove extra trailing empty inputs: if the last two are both empty, remove the last, repeat.
  */
 function cleanUpTrailingEmptyInputs(playersListDiv) {
-  let inputs = playersListDiv.querySelectorAll(".player-input");
-  // Convert NodeList → Array for easy manipulation
-  inputs = Array.from(inputs);
-
-  // Keep removing the last input if:
-  // - There are at least two inputs, AND
-  // - Both the last input and the one before it have empty value
+  let inputs = Array.from(playersListDiv.querySelectorAll(".player-input"));
   while (
     inputs.length >= 2 &&
     inputs[inputs.length - 1].value.trim() === "" &&
@@ -201,56 +187,110 @@ function cleanUpTrailingEmptyInputs(playersListDiv) {
   ) {
     const toRemove = inputs.pop();
     playersListDiv.removeChild(toRemove);
-    inputs = playersListDiv.querySelectorAll(".player-input");
-    inputs = Array.from(inputs);
+    inputs = Array.from(playersListDiv.querySelectorAll(".player-input"));
   }
 }
 
 /**
- * When “+ Add Team” is clicked, create a new .team-section (with one blank player-input),
- * give it the correct data-team-index, and update the Winning Team dropdown.
+ * Add a new team section (with remove button because index ≥ 2) to #teams-container.
  */
 function addNewTeamSection() {
   const teamsContainer = document.getElementById("teams-container");
   const existingTeams = teamsContainer.querySelectorAll(".team-section");
-  const newTeamIndex = existingTeams.length;
+  const newTeamIndex = existingTeams.length; // 2 → first removable team
 
   // Wrapper <div class="team-section" data-team-index="X">
   const teamDiv = document.createElement("div");
   teamDiv.className = "team-section";
   teamDiv.setAttribute("data-team-index", newTeamIndex);
 
-  // Header: “Team N”
+  // Header container (flex): title + remove button
+  const headerContainer = document.createElement("div");
+  headerContainer.className = "team-header-container";
+
   const header = document.createElement("div");
   header.className = "team-header";
   header.innerText = `Team ${newTeamIndex + 1}`;
-  teamDiv.appendChild(header);
+  headerContainer.appendChild(header);
 
-  // .players-list container
+  // Remove‐button only for teams ≥ 2
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "remove-team-button";
+  removeBtn.innerText = "Remove";
+  removeBtn.addEventListener("click", () => removeTeamSection(newTeamIndex));
+  headerContainer.appendChild(removeBtn);
+
+  teamDiv.appendChild(headerContainer);
+
+  // .players-list container with first input
   const playersListDiv = document.createElement("div");
   playersListDiv.className = "players-list";
   teamDiv.appendChild(playersListDiv);
 
-  // Add the first player input
   appendPlayerInput(playersListDiv);
 
-  // Append new teamDiv
   teamsContainer.appendChild(teamDiv);
-
-  // Refresh Winning Team <select> options
   updateWinningTeamOptions();
 }
 
 /**
- * For all existing .team-section elements:
- * 1. If there’s no .player-input at all, create one.
- * 2. Otherwise, ensure each existing .player-input has its “input” event bound.
+ * Remove the team section at index `idx`, then re-index all remaining teams,
+ * update their headers, and refresh “Winning Team” <select>.
+ */
+function removeTeamSection(idx) {
+  const teamsContainer = document.getElementById("teams-container");
+  const teamDivs = Array.from(teamsContainer.querySelectorAll(".team-section"));
+
+  // Prevent removing Team 0 or Team 1
+  if (idx < 2) return;
+
+  // 1) Remove the specific team‐div
+  const teamToRemove = teamDivs[idx];
+  teamsContainer.removeChild(teamToRemove);
+
+  // 2) Re-index all remaining teams
+  const updatedTeamDivs = Array.from(teamsContainer.querySelectorAll(".team-section"));
+  updatedTeamDivs.forEach((div, newIndex) => {
+    div.setAttribute("data-team-index", newIndex);
+
+    // Update header text
+    const headerDiv = div.querySelector(".team-header");
+    headerDiv.innerText = `Team ${newIndex + 1}`;
+
+    // If this team now qualifies for a remove‐button (i.e. newIndex ≥ 2)
+    let removeBtn = div.querySelector(".remove-team-button");
+    if (newIndex >= 2) {
+      if (!removeBtn) {
+        // Create a new remove button if missing
+        removeBtn = document.createElement("button");
+        removeBtn.className = "remove-team-button";
+        removeBtn.innerText = "Remove";
+        removeBtn.addEventListener("click", () => removeTeamSection(newIndex));
+        div.querySelector(".team-header-container").appendChild(removeBtn);
+      } else {
+        // Rebind with correct index
+        removeBtn.replaceWith(removeBtn.cloneNode(true));
+        const newRemove = div.querySelector(".remove-team-button");
+        newRemove.addEventListener("click", () => removeTeamSection(newIndex));
+      }
+    } else {
+      // newIndex < 2 → remove any existing remove‐button
+      if (removeBtn) removeBtn.remove();
+    }
+  });
+
+  // 3) Refresh the Winning Team dropdown
+  updateWinningTeamOptions();
+}
+
+/**
+ * Initialize team inputs for the first two teams, plus bind any dynamically added teams.
  */
 function initializeTeamInputs() {
   const teamsContainer = document.getElementById("teams-container");
   const teamDivs = teamsContainer.querySelectorAll(".team-section");
 
-  teamDivs.forEach((teamDiv) => {
+  teamDivs.forEach((teamDiv, index) => {
     const playersListDiv = teamDiv.querySelector(".players-list");
     let inputs = playersListDiv.querySelectorAll(".player-input");
 
@@ -260,7 +300,7 @@ function initializeTeamInputs() {
       inputs = playersListDiv.querySelectorAll(".player-input");
     }
 
-    // Bind “input” event to each existing field if not already bound
+    // Bind “input” event on existing inputs if not yet bound
     inputs.forEach((input) => {
       if (!input.dataset.bound) {
         input.setAttribute("list", "player-names-list");
@@ -272,26 +312,33 @@ function initializeTeamInputs() {
           }
           cleanUpTrailingEmptyInputs(playersListDiv);
         });
-        input.setAttribute("data-bound", "true");
+        input.dataset.bound = "true";
       }
     });
 
-    // After binding, ensure no extra trailing blank inputs
+    // If index ≥ 2 and remove‐button doesn’t exist, create it
+    if (index >= 2 && !teamDiv.querySelector(".remove-team-button")) {
+      const headerContainer = teamDiv.querySelector(".team-header-container");
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "remove-team-button";
+      removeBtn.innerText = "Remove";
+      removeBtn.addEventListener("click", () => removeTeamSection(index));
+      headerContainer.appendChild(removeBtn);
+    }
+
     cleanUpTrailingEmptyInputs(playersListDiv);
   });
 }
 
 /**
- * Rebuild the “Winning Team” <select> so its options = “Team 1”, “Team 2”, … up to current count.
+ * Rebuild the “Winning Team” <select> so it matches the current number of teams.
  */
 function updateWinningTeamOptions() {
   const select = document.getElementById("winningTeam");
   const teamsContainer = document.getElementById("teams-container");
   const teamCount = teamsContainer.querySelectorAll(".team-section").length;
 
-  // Clear out old options
   select.innerHTML = "";
-
   for (let i = 0; i < teamCount; i++) {
     const opt = document.createElement("option");
     opt.value = i.toString();

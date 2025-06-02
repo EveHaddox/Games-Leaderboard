@@ -14,7 +14,7 @@ body {
 
 /* Links */
 a {
-  color: rgb(180, 58, 58);               /* Elib.Colors.Primary (strong modern red) */
+  color: rgb(180, 58, 58);               /* Elib.Colors.Primary */
   text-decoration: none;
 }
 a:hover {
@@ -27,46 +27,120 @@ h1, h2, h3 {
   color: rgb(240, 240, 240);
   padding: 0.5rem;
   border-radius: 4px;
+  margin-top: 0;
 }
 
-/* Tables */
-table {
-  width: 100%;
-  border-collapse: collapse;
+/* ─────────────── Header Bar ─────────────── */
+.header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1rem;
-  background-color: rgb(36, 36, 36);       /* table background */
+  padding: 0.5rem 1rem;
+  background-color: rgb(36, 36, 36);     /* Elib.Colors.Header */
+  border-radius: 4px;
+}
+.header-bar h1 {
+  margin: 0;
+  font-size: 1.5rem;
   color: rgb(240, 240, 240);
 }
+.header-buttons {
+  display: flex;
+  align-items: center;
+}
+/* Add explicit horizontal spacing between each child */
+.header-buttons > * + * {
+  margin-left: 2rem;
+}
+/* Leaderboard button (gray) */
+.btn-gray {
+  background-color: rgb(120, 120, 120);  /* Elib.Colors.Disabled */
+  color: rgb(240, 240, 240);
+}
+/* Log Out button (red) */
+.btn-red {
+  background-color: rgb(190, 65, 65);    /* Elib.Colors.Negative */
+  color: rgb(240, 240, 240);
+}
+.header-buttons input[type="password"] {
+  max-width: 200px;
+  background-color: rgb(56, 56, 56);     /* Elib.Colors.Scroller */
+  color: rgb(240, 240, 240);
+  border: 1px solid rgb(56, 56, 56);
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+}
+.header-buttons button {
+  font-size: 0.9rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  padding: 0.4rem 0.8rem;
+  transition: opacity 0.2s ease;
+}
+.header-buttons button:hover {
+  opacity: 0.85;
+}
+
+/* ─────────────── Modern Table Styling ─────────────── */
+table {
+  width: 100%;
+  border-collapse: separate;           /* allow rounded corners */
+  border-spacing: 0;
+  margin-bottom: 1rem;
+  background-color: rgb(36, 36, 36);    /* Elib.Colors.Header */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+  overflow: hidden;
+}
 th, td {
-  border: 1px solid rgb(56, 56, 56);       /* Elib.Colors.Scroller as subtle border */
-  padding: 0.5rem;
+  padding: 0.75rem;
   text-align: left;
+  border-bottom: 1px solid rgb(56, 56, 56); /* Elib.Colors.Scroller */
 }
 th {
   background-color: rgb(36, 36, 36);
-  color: rgb(200, 200, 200);               /* Elib.Colors.SecondaryText */
+  color: rgb(200, 200, 200);            /* Elib.Colors.SecondaryText */
+  font-weight: 600;
+}
+tr:nth-child(even) td {
+  background-color: rgb(30, 30, 30);    /* subtle banding */
+}
+/* Rounded corners on table */
+th:first-child {
+  border-top-left-radius: 8px;
+}
+th:last-child {
+  border-top-right-radius: 8px;
+}
+tr:last-child td:first-child {
+  border-bottom-left-radius: 8px;
+}
+tr:last-child td:last-child {
+  border-bottom-right-radius: 8px;
 }
 
-/* Inputs and textareas */
+/* ─────────────── Inputs, Selects, Textareas ─────────────── */
 input[type="text"],
 input[type="password"],
 select,
 textarea {
-  background-color: rgb(36, 36, 36);       /* Elib.Colors.Header for fields */
+  background-color: rgb(36, 36, 36);    /* Elib.Colors.Header */
   color: rgb(240, 240, 240);
-  border: 1px solid rgb(56, 56, 56);       /* Elib.Colors.Scroller */
+  border: 1px solid rgb(56, 56, 56);    /* Elib.Colors.Scroller */
   border-radius: 4px;
   font-size: 1rem;
   padding: 0.4rem;
+  margin-bottom: 0.5rem;
   width: 100%;
   box-sizing: border-box;
-  margin-bottom: 0.5rem;
 }
 
 /* Buttons */
 button,
 input[type="submit"] {
-  background-color: rgb(180, 58, 58);      /* Elib.Colors.Primary */
+  background-color: rgb(180, 58, 58);   /* Elib.Colors.Primary */
   color: rgb(240, 240, 240);
   border: none;
   padding: 0.5rem 1rem;
@@ -77,15 +151,15 @@ input[type="submit"] {
 }
 button:hover,
 input[type="submit"]:hover {
-  background-color: rgb(190, 65, 65);      /* Elib.Colors.Negative (slightly brighter red) */
+  background-color: rgb(190, 65, 65);   /* Elib.Colors.Negative */
 }
 
 /* Disabled fields/text */
 input:disabled,
 select:disabled,
 textarea:disabled {
-  background-color: rgb(56, 56, 56);       /* Elib.Colors.Scroller */
-  color: rgb(100, 100, 100);               /* Elib.Colors.DisabledText */
+  background-color: rgb(56, 56, 56);    /* Elib.Colors.Scroller */
+  color: rgb(100, 100, 100);            /* Elib.Colors.DisabledText */
 }
 
 /* Form group spacing */
@@ -95,18 +169,18 @@ textarea:disabled {
 
 /* Error messages */
 .error {
-  color: rgb(190, 65, 65);                 /* Elib.Colors.Negative */
+  color: rgb(190, 65, 65);              /* Elib.Colors.Negative */
   margin-top: 0.5rem;
 }
 
-/* Custom scrollbars (if supported) */
+/* Custom scrollbars (where supported) */
 ::-webkit-scrollbar {
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: rgb(36, 36, 36);             /* Elib.Colors.Header */
+  background: rgb(36, 36, 36);          /* Elib.Colors.Header */
 }
 ::-webkit-scrollbar-thumb {
-  background: rgb(56, 56, 56);             /* Elib.Colors.Scroller */
+  background: rgb(56, 56, 56);          /* Elib.Colors.Scroller */
   border-radius: 4px;
 }

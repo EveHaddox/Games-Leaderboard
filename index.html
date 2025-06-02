@@ -9,11 +9,22 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body data-page="index">
-  <h1>Game Tracker Leaderboard</h1>
+  <!-- ─────────────── Header Bar ─────────────── -->
+  <div class="header-bar">
+    <h1>Game Tracker Leaderboard</h1>
+    <div class="header-buttons">
+      <!-- Admin Panel button (gray) -->
+      <a href="admin.html">
+        <button class="btn-gray">Admin Panel</button>
+      </a>
+    </div>
+  </div>
+
+  <!-- Leaderboard table will be injected here -->
   <div id="leaderboard">Loading…</div>
-  <p>
-    <a href="admin.html">Admin Panel</a>
-  </p>
+
+  <!-- Older “Admin Panel” link at bottom removed -->
+
   <script src="scripts.js"></script>
 </body>
 </html>
