@@ -47,5 +47,21 @@
       ]
     ],
     "winningTeamIndex": 0
+  },
+  {
+    "timestamp": "2025-06-03T19:18:07.734Z",
+    "season": "2023-2024",
+    "gameName": "Company of Heroes 2",
+    "teams": [
+      [
+        "Eve",
+        "Donat"
+      ],
+      [
+        "Kosa",
+        "Masorem"
+      ]
+    ],
+    "winningTeamIndex": 0
   }
 ]
