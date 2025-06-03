@@ -1,21 +1,5 @@
 [
   {
-    "timestamp": "2025-06-02T22:19:25.704Z",
-    "gameName": "Susnis",
-    "teams": [
-      [
-        "Eve"
-      ],
-      [
-        "Drozd"
-      ],
-      [
-        "Donat"
-      ]
-    ],
-    "winningTeamIndex": 2
-  },
-  {
     "timestamp": "2025-06-03T14:26:50.654Z",
     "season": "2023-2024",
     "gameName": "War Selection",
