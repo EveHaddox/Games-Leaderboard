@@ -15,5 +15,19 @@
       ]
     ],
     "winningTeamIndex": 0
+  },
+  {
+    "timestamp": "2025-06-03T19:22:32.189Z",
+    "season": "Susnis",
+    "gameName": "Company of Heroes 2",
+    "teams": [
+      [
+        "Eve"
+      ],
+      [
+        "Młynek"
+      ]
+    ],
+    "winningTeamIndex": 1
   }
 ]
