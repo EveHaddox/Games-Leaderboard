@@ -108,6 +108,11 @@
     #pat-login button:hover {
       background-color: rgb(190, 65, 65);     /* Elib.Colors.Negative */
     }
+    #pat-error {
+      color: rgb(190, 65, 65);
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
 
     /* ─────────────── Dashboard Layout ─────────────── */
     .dashboard-content {
@@ -206,6 +211,7 @@
         <h2>Enter GitHub PAT</h2>
         <input type="password" id="pat-input" placeholder="Paste your Personal Access Token" />
         <button id="save-pat-button">Save Token</button>
+        <div id="pat-error"></div>
       </div>
 
       <!-- Dashboard Content (shown after login) -->
@@ -259,25 +265,54 @@
       const token = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
       const patDiv = document.getElementById("pat-login");
       const dashDiv = document.getElementById("dashboard-section");
+      const patError = document.getElementById("pat-error");
 
       if (!token) {
         // Show login prompt
         patDiv.style.display = "flex";
         dashDiv.style.display = "none";
+        patError.innerText = "";
       } else {
-        // Already logged in → show dashboard
-        patDiv.style.display = "none";
-        dashDiv.style.display = "block";
-        renderDashboard();
+        // Already have a token → verify it
+        verifyToken(token);
       }
     }
 
-    // Save PAT into localStorage and re‐initialize
+    // Verify PAT by calling GitHub API /user endpoint
+    async function verifyToken(token) {
+      const patDiv = document.getElementById("pat-login");
+      const dashDiv = document.getElementById("dashboard-section");
+      const patError = document.getElementById("pat-error");
+
+      try {
+        const res = await fetch("https://api.github.com/user", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.status === 200) {
+          // Valid token
+          patDiv.style.display = "none";
+          dashDiv.style.display = "block";
+          patError.innerText = "";
+          renderDashboard();
+        } else {
+          // Invalid token
+          throw new Error("Invalid token");
+        }
+      } catch {
+        // Remove bad token and show error
+        localStorage.removeItem(LOCAL_STORAGE_TOKEN_KEY);
+        patError.innerText = "Token is invalid. Please try again.";
+        patDiv.style.display = "flex";
+        dashDiv.style.display = "none";
+      }
+    }
+
+    // Save PAT into localStorage and re‐initialize (will trigger verification)
     function savePAT() {
       const input = document.getElementById("pat-input");
       const pat = input.value.trim();
       if (!pat) {
-        alert("Token cannot be empty.");
+        document.getElementById("pat-error").innerText = "Token cannot be empty.";
         return;
       }
       localStorage.setItem(LOCAL_STORAGE_TOKEN_KEY, pat);
