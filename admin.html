@@ -16,7 +16,7 @@
       align-items: center;
       margin-bottom: 1rem;
       padding: 0.5rem 1rem;
-      background-color: rgb(36, 36, 36);     /* Elib.Colors.Header */
+      background-color: rgb(36, 36, 36);
       border-radius: 4px;
     }
     .header-bar h1 {
@@ -28,13 +28,12 @@
       display: flex;
       align-items: center;
     }
-    /* ensure children in header-buttons have at least 2rem between them */
     .header-buttons > * + * {
       margin-left: 2rem;
     }
     .header-buttons input[type="password"] {
       max-width: 200px;
-      background-color: rgb(56, 56, 56);     /* Elib.Colors.Scroller */
+      background-color: rgb(56, 56, 56);
       color: rgb(240, 240, 240);
       border: 1px solid rgb(56, 56, 56);
       border-radius: 4px;
@@ -52,10 +51,31 @@
       opacity: 0.85;
     }
 
+    /* ─────────────── Add Game Form ─────────────── */
+    .form-group select,
+    .form-group input[type="text"] {
+      background-color: rgb(36, 36, 36);
+      color: rgb(240, 240, 240);
+      border: 1px solid rgb(56, 56, 56);
+      border-radius: 4px;
+      font-size: 1rem;
+      padding: 0.4rem;
+      margin-bottom: 0.5rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .readonly-field {
+      background-color: rgb(56, 56, 56);
+      color: rgb(200, 200, 200);
+      border-radius: 4px;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
     /* ─────────────── Team Sections ─────────────── */
     .team-section {
-      background-color: rgb(36, 36, 36);    /* Elib.Colors.Header */
-      border: 1px solid rgb(56, 56, 56);    /* Elib.Colors.Scroller */
+      background-color: rgb(36, 36, 36);
+      border: 1px solid rgb(56, 56, 56);
       border-radius: 4px;
       margin-bottom: 1rem;
       padding: 0.75rem;
@@ -68,10 +88,10 @@
     }
     .team-header {
       font-weight: bold;
-      color: rgb(200, 200, 200);            /* Elib.Colors.SecondaryText */
+      color: rgb(200, 200, 200);
     }
     .remove-team-button {
-      background-color: rgb(190, 65, 65);   /* Elib.Colors.Negative */
+      background-color: rgb(190, 65, 65);
       color: rgb(240, 240, 240);
       font-size: 0.8rem;
       padding: 0.25rem 0.5rem;
@@ -91,7 +111,7 @@
     #add-team-button {
       margin-top: 0.5rem;
       margin-bottom: 1rem;
-      background-color: rgb(120, 120, 120); /* .btn-gray */
+      background-color: rgb(120, 120, 120);
     }
     #add-team-button:hover {
       opacity: 0.85;
@@ -99,30 +119,20 @@
   </style>
 </head>
 <body data-page="admin">
-  <!-- Datalist for player‐name autocomplete -->
   <datalist id="player-names-list"></datalist>
 
   <!-- ─────────────── Header Bar ─────────────── -->
   <div class="header-bar">
     <h1>Admin Panel</h1>
     <div class="header-buttons">
-      <!-- Shown when NOT logged in -->
       <div id="pat-login">
-        <input 
-          type="password" 
-          id="pat-input" 
-          placeholder="Paste PAT here…" 
-        />
+        <input type="password" id="pat-input" placeholder="Paste PAT here…" />
         <button id="save-pat-button" class="btn-gray">Save Token</button>
       </div>
-      <!-- Shown when logged in -->
       <div id="post-login-buttons" style="display: none;">
-        <a href="index.html">
-          <button class="btn-gray">Leaderboard</button>
-        </a>
-        <a href="manage_games.html">
-          <button class="btn-gray">Manage Games</button>
-        </a>
+        <a href="index.html"><button class="btn-gray">Leaderboard</button></a>
+        <a href="manage_games.html"><button class="btn-gray">Manage Games</button></a>
+        <a href="manage_seasons.html"><button class="btn-gray">Manage Seasons</button></a>
         <button id="logout-button" class="btn-red">Log Out</button>
       </div>
     </div>
@@ -131,43 +141,46 @@
   <!-- ─────────────── Add Game Form ─────────────── -->
   <div id="game-form-container" style="display: none;">
     <form id="add-game-form">
+      <!-- Current Season (read-only) -->
+      <div class="form-group">
+        <label><strong>Season:</strong></label>
+        <div id="current-season-display" class="readonly-field">Loading…</div>
+        <input type="hidden" id="season" name="season" value="" />
+      </div>
+
       <div class="form-group">
         <label for="gameName"><strong>Game Name:</strong><br />
-          <!-- Changed from <input> to <select>; JS will populate options -->
           <select id="gameName" required>
             <option value="" disabled selected>Loading…</option>
           </select>
         </label>
       </div>
 
-      <!-- TEAMS CONTAINER: initially two preset teams -->
       <div id="teams-container">
-        <!-- Team 1 (cannot remove) -->
         <div class="team-section" data-team-index="0">
           <div class="team-header-container">
             <div class="team-header">Team 1</div>
           </div>
           <div class="players-list">
-            <input 
-              type="text" 
-              class="player-input" 
-              placeholder="Player name…" 
+            <input
+              type="text"
+              class="player-input"
+              placeholder="Player name…"
               data-player-index="0"
               list="player-names-list"
             />
           </div>
         </div>
 
-        <!-- Team 2 (cannot remove) -->
         <div class="team-section" data-team-index="1">
           <div class="team-header-container">
             <div class="team-header">Team 2</div>
           </div>
           <div class="players-list">
-            <input 
-              type="text" 
-              class="player-input" 
-              placeholder="Player name…" 
+            <input
+              type="text"
+              class="player-input"
+              placeholder="Player name…"
               data-player-index="0"
               list="player-names-list"
             />

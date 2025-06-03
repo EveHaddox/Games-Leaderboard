@@ -9,7 +9,8 @@ const API_BASE_URL            = `https://api.github.com/repos/${GITHUB_USERNAME}
 
 const GAMES_JSON_PATH         = "games.json";
 const GAME_OPTIONS_PATH       = "gameOptions.json";
-const LOCAL_STORAGE_TOKEN_KEY = "github_access_token"; // stores the PAT in localStorage
+const SEASONS_PATH            = "seasons.json";
+const LOCAL_STORAGE_TOKEN_KEY = "github_access_token";
 
 
 // ──────────────── GENERIC JSON FETCH ────────────────
@@ -29,6 +30,14 @@ async function getFileSHAandContent(path) {
 
   const res = await fetch(endpoint, { headers });
   if (res.status === 404) {
+    // If seasons.json doesn’t exist yet, return an empty structure
+    if (path === SEASONS_PATH) {
+      return {
+        sha: null,
+        content: btoa(JSON.stringify({ current: "", all: [] })),
+      };
+    }
+    // If gameOptions.json or games.json missing, treat as empty array
     return { sha: null, content: btoa("[]") };
   }
   if (!res.ok) {
@@ -40,12 +49,13 @@ async function getFileSHAandContent(path) {
 }
 
 // ──────────────── GENERIC COMMIT JSON BACK TO GITHUB ────────────────
-async function commitJSON(newArray, path, commitMessage) {
+async function commitJSON(newArrayOrObj, path, commitMessage) {
   const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
-  if (!accessToken) throw new Error(`No GitHub token found. Please paste a valid PAT first.`);
+  if (!accessToken)
+    throw new Error(`No GitHub token found. Please paste a valid PAT first.`);
 
   const { sha, content: oldContentBase64 } = await getFileSHAandContent(path);
-  const newContentString = JSON.stringify(newArray, null, 2);
+  const newContentString = JSON.stringify(newArrayOrObj, null, 2);
   const newContentBase64 = btoa(unescape(encodeURIComponent(newContentString)));
 
   const endpoint = `${API_BASE_URL}/contents/${path}`;
@@ -53,7 +63,7 @@ async function commitJSON(newArray, path, commitMessage) {
     message: commitMessage,
     content: newContentBase64,
     ...(sha ? { sha } : {}),
-    branch: "main"
+    branch: "main",
   };
 
   const res = await fetch(endpoint, {
@@ -61,9 +71,9 @@ async function commitJSON(newArray, path, commitMessage) {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Accept: "application/vnd.github.v3+json",
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -90,14 +100,26 @@ function logout() {
   window.location.href = "index.html";
 }
 
-/**
- * On admin.html load:
- * 1. Toggle between login inputs vs. Admin header buttons.
- * 2. Populate game‐dropdown (inside a try/catch so errors don’t break other pages).
- * 3. Populate player autocomplete.
- * 4. Initialize team inputs.
- * 5. Update “Winning Team” dropdown.
- */
+
+// ──────────────── ON-LOAD BINDINGS ────────────────
+function initPage() {
+  const pageId = document.body.dataset.page;
+  if (pageId === "index") {
+    initLeaderboardPage();
+  } else if (pageId === "player") {
+    renderPlayerPage();
+  } else if (pageId === "admin") {
+    onAdminPageLoad();
+    document.getElementById("save-pat-button").onclick = savePAT;
+    document.getElementById("logout-button").onclick = logout;
+    document.getElementById("add-team-button").onclick = addNewTeamSection;
+    document.getElementById("add-game-form").onsubmit = onAddGameFormSubmit;
+  }
+}
+document.addEventListener("DOMContentLoaded", initPage);
+
+
+// ──────────────── ADMIN PAGE: Populate current season & dropdowns ────────────────
 async function onAdminPageLoad() {
   const token = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
   if (token) {
@@ -105,7 +127,23 @@ async function onAdminPageLoad() {
     document.getElementById("post-login-buttons").style.display = "flex";
     document.getElementById("game-form-container").style.display = "block";
 
-    // 1) Populate game dropdown, but catch errors so index/player pages aren’t affected
+    // 1) Fetch seasons.json to get “current” and list of all seasons
+    let seasonsData;
+    try {
+      seasonsData = await fetchJSON(SEASONS_PATH);
+    } catch (err) {
+      console.warn("Could not fetch seasons.json:", err);
+      seasonsData = { current: "", all: [] };
+    }
+    const { current, all } = seasonsData;
+
+    // 2) Populate the read-only current season display & hidden input
+    const displayDiv = document.getElementById("current-season-display");
+    const hiddenInput = document.getElementById("season");
+    if (displayDiv) displayDiv.innerText = current || "(no season defined)";
+    if (hiddenInput) hiddenInput.value = current;
+
+    // 3) Populate game dropdown
     try {
       await populateGameDropdown();
     } catch (err) {
@@ -116,14 +154,14 @@ async function onAdminPageLoad() {
       }
     }
 
-    // 2) Populate the player‐name datalist
+    // 4) Populate player datalist
     try {
       await populatePlayerDatalist();
     } catch (err) {
       console.warn("Could not populate player datalist:", err);
     }
 
-    // 3) Initialize dynamic team/player inputs and winning‐team dropdown
+    // 5) Initialize dynamic team inputs
     initializeTeamInputs();
     updateWinningTeamOptions();
   } else {
@@ -134,29 +172,19 @@ async function onAdminPageLoad() {
 }
 
 
-// ──────────────── POPULATE GAME DROPDOWN ────────────────
+// ──────────────── POPULATE GAME DROPDOWN (Admin) ────────────────
 async function populateGameDropdown() {
   const select = document.getElementById("gameName");
-  if (!select) return; // If we’re not on admin.html, skip
+  if (!select) return;
 
-  select.innerHTML = "";  // Clear out any old options
+  select.innerHTML = "";
+  const options = await fetchJSON(GAME_OPTIONS_PATH);
 
-  let options;
-  try {
-    options = await fetchJSON(GAME_OPTIONS_PATH);
-  } catch (err) {
-    // If fetch fails (e.g. file missing), show placeholder
+  if (!options || options.length === 0) {
     select.innerHTML = `<option value="" disabled selected>(no games defined)</option>`;
     return;
   }
 
-  // If the JSON is empty or not an array, also show placeholder
-  if (!Array.isArray(options) || options.length === 0) {
-    select.innerHTML = `<option value="" disabled selected>(no games defined)</option>`;
-    return;
-  }
-
-  // Otherwise, build a real <select> list
   const placeholder = document.createElement("option");
   placeholder.value = "";
   placeholder.innerText = "-- Select Game --";
@@ -173,8 +201,7 @@ async function populateGameDropdown() {
 }
 
 
-
-// ──────────────── POPULATE PLAYER DATALIST ────────────────
+// ──────────────── POPULATE PLAYER DATALIST (Admin) ────────────────
 async function populatePlayerDatalist() {
   const datalist = document.getElementById("player-names-list");
   if (!datalist) return;
@@ -184,16 +211,13 @@ async function populatePlayerDatalist() {
   const nameSet = new Set();
   games.forEach((game) => {
     game.teams.forEach((team) => {
-      team.forEach((player) => {
-        nameSet.add(player);
-      });
+      team.forEach((player) => nameSet.add(player));
     });
   });
 
   const sortedNames = Array.from(nameSet).sort((a, b) =>
     a.toLowerCase().localeCompare(b.toLowerCase())
   );
-
   sortedNames.forEach((name) => {
     const option = document.createElement("option");
     option.value = name;
@@ -202,7 +226,7 @@ async function populatePlayerDatalist() {
 }
 
 
-// ──────────────── DYNAMIC TEAM/PLAYER INPUT LOGIC ────────────────
+// ──────────────── DYNAMIC TEAM/PLAYER INPUT LOGIC (Admin) ────────────────
 function appendPlayerInput(playersListDiv) {
   const input = document.createElement("input");
   input.type = "text";
@@ -246,7 +270,6 @@ function addNewTeamSection() {
 
   const headerContainer = document.createElement("div");
   headerContainer.className = "team-header-container";
-
   const header = document.createElement("div");
   header.className = "team-header";
   header.innerText = `Team ${newTeamIndex + 1}`;
@@ -259,13 +282,11 @@ function addNewTeamSection() {
   headerContainer.appendChild(removeBtn);
 
   teamDiv.appendChild(headerContainer);
-
   const playersListDiv = document.createElement("div");
   playersListDiv.className = "players-list";
   teamDiv.appendChild(playersListDiv);
 
   appendPlayerInput(playersListDiv);
-
   teamsContainer.appendChild(teamDiv);
   updateWinningTeamOptions();
 }
@@ -349,6 +370,7 @@ function initializeTeamInputs() {
 
 function updateWinningTeamOptions() {
   const select = document.getElementById("winningTeam");
+  if (!select) return;
   const teamsContainer = document.getElementById("teams-container");
   const teamCount = teamsContainer.querySelectorAll(".team-section").length;
 
@@ -362,13 +384,22 @@ function updateWinningTeamOptions() {
 }
 
 
-// ──────────────── ADD GAME: Handle form submit ────────────────
+// ──────────────── ADD GAME: Handle form submit (Admin) ────────────────
 async function onAddGameFormSubmit(event) {
   event.preventDefault();
 
+  // Season is a hidden field, already set to “current”
+  const season = document.getElementById("season").value;
   const gameName = document.getElementById("gameName").value;
-  const winningTeamIndex = parseInt(document.getElementById("winningTeam").value, 10);
+  const winningTeamIndex = parseInt(
+    document.getElementById("winningTeam").value,
+    10
+  );
 
+  if (!season) {
+    alert("No current season defined.");
+    return;
+  }
   if (!gameName) {
     alert("Please select a game.");
     return;
@@ -397,11 +428,13 @@ async function onAddGameFormSubmit(event) {
     return;
   }
 
+  // Build and commit the new game object (always uses the current season)
   const newGame = {
     timestamp: new Date().toISOString(),
+    season,
     gameName,
     teams,
-    winningTeamIndex
+    winningTeamIndex,
   };
 
   try {
@@ -409,7 +442,9 @@ async function onAddGameFormSubmit(event) {
     const oldArray = JSON.parse(atob(oldBase64));
 
     const newArray = oldArray.concat(newGame);
-    const commitMsg = `Add game: ${gameName} (winner: Team ${winningTeamIndex + 1})`;
+    const commitMsg = `Add game: ${gameName}, season: ${season}, winner: Team ${
+      winningTeamIndex + 1
+    }`;
     await commitJSON(newArray, GAMES_JSON_PATH, commitMsg);
 
     alert("Game added successfully!");
@@ -421,7 +456,92 @@ async function onAddGameFormSubmit(event) {
 }
 
 
-// ──────────────── LEADERBOARD: Compute stats & render ────────────────
+// ──────────────── LEADERBOARD PAGE SETUP ────────────────
+async function initLeaderboardPage() {
+  // 1) Populate season filter dropdown with all seasons (current pre-selected)
+  try {
+    await populateSeasonFilter();
+  } catch (err) {
+    console.warn("Could not populate season filter:", err);
+    const seasonSelect = document.getElementById("season-filter");
+    if (seasonSelect) {
+      seasonSelect.innerHTML = `<option value="" disabled selected>(no seasons)</option>`;
+    }
+  }
+
+  // 2) Populate game filter dropdown (All Games + each game name)
+  try {
+    await populateGameFilter();
+  } catch (err) {
+    console.warn("Could not populate game filter:", err);
+    const gameSelect = document.getElementById("game-filter");
+    if (gameSelect) {
+      gameSelect.innerHTML = `<option value="__all__" selected>All Games</option>`;
+    }
+  }
+
+  // 3) When either filter changes, re-render
+  const seasonSelect = document.getElementById("season-filter");
+  if (seasonSelect) {
+    seasonSelect.addEventListener("change", () => {
+      const gameVal = document.getElementById("game-filter").value;
+      renderLeaderboard(seasonSelect.value, gameVal);
+    });
+  }
+
+  const gameSelect = document.getElementById("game-filter");
+  if (gameSelect) {
+    gameSelect.addEventListener("change", () => {
+      const seasonVal = document.getElementById("season-filter").value;
+      renderLeaderboard(seasonVal, gameSelect.value);
+    });
+  }
+
+  // 4) Initial render: season = current season, game = "__all__"
+  const initialSeason = document.getElementById("season-filter")?.value || "";
+  renderLeaderboard(initialSeason, "__all__");
+}
+
+/**
+ * Populate <select id="season-filter"> with all seasons, marking current.
+ */
+async function populateSeasonFilter() {
+  const select = document.getElementById("season-filter");
+  if (!select) return;
+
+  const data = await fetchJSON(SEASONS_PATH);
+  const { current, all } = data;
+  select.innerHTML = "";
+
+  all.forEach((seasonName) => {
+    const opt = document.createElement("option");
+    opt.value = seasonName;
+    opt.innerText = seasonName;
+    if (seasonName === current) opt.selected = true;
+    select.appendChild(opt);
+  });
+}
+
+/**
+ * Populate <select id="game-filter"> with "All Games" + each game.
+ */
+async function populateGameFilter() {
+  const select = document.getElementById("game-filter");
+  if (!select) return;
+
+  const options = await fetchJSON(GAME_OPTIONS_PATH);
+  select.innerHTML = `<option value="__all__" selected>All Games</option>`;
+
+  options.forEach((gameName) => {
+    const opt = document.createElement("option");
+    opt.value = gameName;
+    opt.innerText = gameName;
+    select.appendChild(opt);
+  });
+}
+
+
+// ──────────────── LEADERBOARD: Compute stats & render with filters ────────────────
 function computePlayerStats(gamesArray) {
   const stats = new Map();
 
@@ -448,20 +568,37 @@ function computePlayerStats(gamesArray) {
   return stats;
 }
 
-async function renderLeaderboard() {
-  let games;
+/**
+ * Render the leaderboard table, filtered by season & gameName.
+ * @param {string} seasonFilter - a specific season name.
+ * @param {string} gameFilter - "__all__" or a specific gameName.
+ */
+async function renderLeaderboard(seasonFilter, gameFilter) {
+  let allGames;
   try {
-    games = await fetchJSON(GAMES_JSON_PATH);
+    allGames = await fetchJSON(GAMES_JSON_PATH);
   } catch (err) {
     document.getElementById("leaderboard").innerText = "Error loading data: " + err;
     return;
   }
 
-  const statsMap = computePlayerStats(games);
+  // 1) Filter by season
+  let filteredGames = allGames.filter((g) => g.season === seasonFilter);
+
+  // 2) Filter by game if requested
+  if (gameFilter && gameFilter !== "__all__") {
+    filteredGames = filteredGames.filter((g) => g.gameName === gameFilter);
+  }
+
+  // 3) Compute stats on filteredGames
+  const statsMap = computePlayerStats(filteredGames);
+
+  // 4) Convert to array and sort by wins desc, then played desc
   const rows = Array.from(statsMap.entries())
     .map(([player, s]) => ({ player, ...s }))
     .sort((a, b) => b.wins - a.wins || b.played - a.played);
 
+  // 5) Build HTML table
   const table = document.createElement("table");
   const headerRow = document.createElement("tr");
   ["Player", "Wins", "Losses", "Played"].forEach((heading) => {
@@ -508,15 +645,15 @@ async function renderPlayerPage() {
   }
   document.getElementById("player-name").innerText = player;
 
-  let games;
+  let allGames;
   try {
-    games = await fetchJSON(GAMES_JSON_PATH);
+    allGames = await fetchJSON(GAMES_JSON_PATH);
   } catch (err) {
     document.getElementById("player-games").innerText = "Error loading data: " + err;
     return;
   }
 
-  const filtered = games.filter((game) =>
+  const filtered = allGames.filter((game) =>
     game.teams.some((team) => team.includes(player))
   );
 
@@ -527,31 +664,42 @@ async function renderPlayerPage() {
 
   const table = document.createElement("table");
   const headerRow = document.createElement("tr");
-  ["Date/Time", "Game Name", "Team (You + Allies)", "Opponents", "Result"].forEach((h) => {
-    const th = document.createElement("th");
-    th.innerText = h;
-    headerRow.appendChild(th);
-  });
+  ["Date/Time", "Season", "Game Name", "Team (You + Allies)", "Opponents", "Result"].forEach(
+    (h) => {
+      const th = document.createElement("th");
+      th.innerText = h;
+      headerRow.appendChild(th);
+    }
+  );
   table.appendChild(headerRow);
 
   filtered.forEach((game) => {
     const tr = document.createElement("tr");
 
+    // Date/Time
     const dtCell = document.createElement("td");
     const dt = new Date(game.timestamp);
     dtCell.innerText = dt.toUTCString().replace(/ GMT$/, "");
     tr.appendChild(dtCell);
 
+    // Season
+    const sCell = document.createElement("td");
+    sCell.innerText = game.season || "";
+    tr.appendChild(sCell);
+
+    // Game Name
     const gnCell = document.createElement("td");
     gnCell.innerText = game.gameName;
     tr.appendChild(gnCell);
 
+    // Team (you + allies)
     const myTeamIdx = game.teams.findIndex((team) => team.includes(player));
     const myTeam = game.teams[myTeamIdx];
     const teamCell = document.createElement("td");
     teamCell.innerText = myTeam.join(", ");
     tr.appendChild(teamCell);
 
+    // Opponents
     const opponents = game.teams
       .filter((_, idx) => idx !== myTeamIdx)
       .flat();
@@ -559,8 +707,9 @@ async function renderPlayerPage() {
     oppCell.innerText = opponents.join(", ");
     tr.appendChild(oppCell);
 
+    // Result
     const resCell = document.createElement("td");
-    resCell.innerText = (myTeamIdx === game.winningTeamIndex) ? "W" : "L";
+    resCell.innerText = myTeamIdx === game.winningTeamIndex ? "W" : "L";
     tr.appendChild(resCell);
 
     table.appendChild(tr);
@@ -570,22 +719,3 @@ async function renderPlayerPage() {
   container.innerHTML = "";
   container.appendChild(table);
 }
-
-
-// ──────────────── ON-LOAD BINDINGS ────────────────
-function initPage() {
-  const pageId = document.body.dataset.page;
-  if (pageId === "index") {
-    renderLeaderboard();
-  } else if (pageId === "player") {
-    renderPlayerPage();
-  } else if (pageId === "admin") {
-    onAdminPageLoad();
-    document.getElementById("save-pat-button").onclick   = savePAT;
-    document.getElementById("logout-button").onclick     = logout;
-    document.getElementById("add-team-button").onclick   = addNewTeamSection;
-    document.getElementById("add-game-form").onsubmit    = onAddGameFormSubmit;
-  }
-}
-
-document.addEventListener("DOMContentLoaded", initPage);
