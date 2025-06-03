@@ -1,0 +1,334 @@
+<!-- dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin – Dashboard</title>
+
+  <style>
+    /* ─────────────── Sidebar & Layout ─────────────── */
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: rgb(26, 26, 26); /* Elib.Background */
+      color: rgb(240, 240, 240);
+    }
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 220px;
+      height: 100vh;
+      background-color: rgb(36, 36, 36);      /* Elib.Header */
+      border-right: 1px solid rgb(56, 56, 56); /* Elib.Scroller */
+      display: flex;
+      flex-direction: column;
+      padding-top: 1rem;
+    }
+    .sidebar a {
+      text-decoration: none;
+    }
+    .sidebar .nav-item {
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      color: rgb(200, 200, 200);               /* Elib.SecondaryText */
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+    }
+    .sidebar .nav-item:hover {
+      background-color: rgb(56, 56, 56);      /* Elib.Scroller */
+      color: rgb(240, 240, 240);
+    }
+    .sidebar .nav-item.active {
+      background-color: rgb(56, 56, 56);
+      color: rgb(240, 240, 240);
+      font-weight: bold;
+    }
+
+    /* ─────────────── Main Content ─────────────── */
+    .content-wrapper {
+      margin-left: 220px;
+      padding: 1.5rem;
+      width: calc(100% - 220px);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    /* Center inner content and limit its width */
+    .content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      background-color: rgb(36, 36, 36);     /* Elib.Header */
+      border-radius: 4px;
+    }
+    .header-bar h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      color: rgb(240, 240, 240);
+    }
+
+    /* ─────────────── Stats Cards & Charts ─────────────── */
+    .stats-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+    }
+    .stat-card {
+      background-color: rgb(36, 36, 36);
+      border: 1px solid rgb(56, 56, 56);
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+    }
+    .stat-card h2 {
+      margin: 0;
+      font-size: 2rem;
+      color: rgb(240, 240, 240);
+    }
+    .stat-card p {
+      margin: 0.25rem 0 0;
+      color: rgb(200, 200, 200);
+    }
+
+    .charts-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+      justify-content: center;
+    }
+    .chart-box {
+      background-color: rgb(36, 36, 36);
+      border: 1px solid rgb(56, 56, 56);
+      border-radius: 8px;
+      padding: 1rem;
+      flex: 1 1 400px;
+      max-width: 600px;
+    }
+    .chart-box canvas {
+      width: 100% !important;
+      height: auto !important;
+    }
+  </style>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <!-- ─────────────── Sidebar ─────────────── -->
+  <div class="sidebar">
+    <a href="dashboard.html"><div class="nav-item active">📊 Dashboard</div></a>
+    <a href="admin.html"><div class="nav-item">➕ Add Game</div></a>
+    <a href="manage_games.html"><div class="nav-item">🎮 Manage Games</div></a>
+    <a href="manage_seasons.html"><div class="nav-item">🗓 Manage Seasons</div></a>
+    <a href="index.html"><div class="nav-item">🔙 Back to Leaderboard</div></a>
+    <button id="logout-button" class="nav-item" style="background:none; border:none; width:100%; text-align:left; color:rgb(200,200,200);">🚪 Log Out</button>
+  </div>
+
+  <!-- ─────────────── Main Content Wrapper ─────────────── -->
+  <div class="content-wrapper">
+    <div class="content">
+      <div class="header-bar">
+        <h1>Dashboard</h1>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="stats-container">
+        <div class="stat-card">
+          <h2 id="total-games">0</h2>
+          <p>Total Games</p>
+        </div>
+        <div class="stat-card">
+          <h2 id="total-players">0</h2>
+          <p>Total Players</p>
+        </div>
+        <div class="stat-card">
+          <h2 id="total-seasons">0</h2>
+          <p>Total Seasons</p>
+        </div>
+        <div class="stat-card">
+          <h2 id="total-game-types">0</h2>
+          <p>Distinct Game Names</p>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts-container">
+        <div class="chart-box">
+          <canvas id="winsPerGameChart"></canvas>
+        </div>
+        <div class="chart-box">
+          <canvas id="gamesPerSeasonChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const GITHUB_USERNAME         = "EveHaddox";
+    const REPO_NAME               = "Games-Leaderboard";
+    const RAW_BASE_URL            = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main`;
+    const API_BASE_URL            = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}`;
+    const GAMES_JSON_PATH         = "games.json";
+    const GAME_OPTIONS_PATH       = "gameOptions.json";
+    const SEASONS_PATH            = "seasons.json";
+    const LOCAL_STORAGE_TOKEN_KEY = "github_access_token";
+
+    function logout() {
+      localStorage.removeItem(LOCAL_STORAGE_TOKEN_KEY);
+      window.location.href = "index.html";
+    }
+    document.getElementById("logout-button").onclick = logout;
+
+    async function fetchJSON(path) {
+      const url = `${RAW_BASE_URL}/${path}?cachebust=${Date.now()}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to fetch ${path}`);
+      return await res.json();
+    }
+
+    function computeDashboardStats(games, seasons, gameOptions) {
+      const totalGames = games.length;
+      const playersSet = new Set();
+      games.forEach(g => {
+        g.teams.forEach(team => team.forEach(p => playersSet.add(p)));
+      });
+      const totalPlayers = playersSet.size;
+      const totalSeasons = seasons.all.length;
+      const distinctGamesSet = new Set(games.map(g => g.gameName));
+      const totalGameTypes = distinctGamesSet.size;
+      return { totalGames, totalPlayers, totalSeasons, totalGameTypes };
+    }
+
+    function buildWinsPerGameData(games) {
+      const winsCount = {};
+      games.forEach(g => {
+        const name = g.gameName;
+        if (!winsCount[name]) winsCount[name] = 0;
+        winsCount[name] += g.teams[g.winningTeamIndex].length;
+      });
+      return winsCount;
+    }
+
+    function buildGamesPerSeasonData(games) {
+      const seasonCount = {};
+      games.forEach(g => {
+        const s = g.season || "(no season)";
+        if (!seasonCount[s]) seasonCount[s] = 0;
+        seasonCount[s]++;
+      });
+      return seasonCount;
+    }
+
+    async function renderDashboard() {
+      let games, seasons, gameOptions;
+      try {
+        [games, seasons, gameOptions] = await Promise.all([
+          fetchJSON(GAMES_JSON_PATH),
+          fetchJSON(SEASONS_PATH),
+          fetchJSON(GAME_OPTIONS_PATH)
+        ]);
+      } catch (err) {
+        console.error("Error loading dashboard data:", err);
+        return;
+      }
+
+      const { totalGames, totalPlayers, totalSeasons, totalGameTypes } =
+        computeDashboardStats(games, seasons, gameOptions);
+
+      document.getElementById("total-games").innerText = totalGames;
+      document.getElementById("total-players").innerText = totalPlayers;
+      document.getElementById("total-seasons").innerText = totalSeasons;
+      document.getElementById("total-game-types").innerText = totalGameTypes;
+
+      // Bar chart: Wins per Game
+      const winsData = buildWinsPerGameData(games);
+      const ctx1 = document.getElementById("winsPerGameChart").getContext("2d");
+      new Chart(ctx1, {
+        type: "bar",
+        data: {
+          labels: Object.keys(winsData),
+          datasets: [{
+            label: "Wins (sum of winning players)",
+            data: Object.values(winsData),
+            backgroundColor: "rgba(180, 58, 58, 0.7)",
+            borderColor: "rgba(180, 58, 58, 1)",
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            title: {
+              display: true,
+              text: "Total Wins by Game"
+            }
+          },
+          scales: {
+            x: { title: { display: true, text: "Game Name" } },
+            y: { title: { display: true, text: "Wins (number of winning players)" }, beginAtZero: true }
+          }
+        }
+      });
+
+      // Pie chart: Games per Season
+      const seasonData = buildGamesPerSeasonData(games);
+      const ctx2 = document.getElementById("gamesPerSeasonChart").getContext("2d");
+      new Chart(ctx2, {
+        type: "pie",
+        data: {
+          labels: Object.keys(seasonData),
+          datasets: [{
+            label: "Games per Season",
+            data: Object.values(seasonData),
+            backgroundColor: [
+              "rgba(214,174,34, 0.7)",   // Gold
+              "rgba(192,192,192, 0.7)", // Silver
+              "rgba(145,94,49, 0.7)",   // Bronze
+              "rgba(70,175,70,0.7)",    // Green
+              "rgba(180,58,58,0.7)",    // Red
+              "rgba(120,120,120,0.7)"   // Gray
+            ],
+            borderColor: [
+              "rgba(214,174,34,1)",
+              "rgba(192,192,192,1)",
+              "rgba(145,94,49,1)",
+              "rgba(70,175,70,1)",
+              "rgba(180,58,58,1)",
+              "rgba(120,120,120,1)"
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: "right", labels: { boxWidth: 20 } },
+            title: {
+              display: true,
+              text: "Games Distribution by Season"
+            }
+          }
+        }
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", renderDashboard);
+    window.addEventListener("focus", renderDashboard);
+  </script>
+</body>
+</html>

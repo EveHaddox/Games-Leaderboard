@@ -5,18 +5,72 @@
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Manage Games – Game Tracker</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Admin – Manage Games</title>
 
   <style>
-    /* ─────────────── Header Bar ─────────────── */
+    /* ─────────────── Sidebar & Layout ─────────────── */
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: rgb(26, 26, 26); /* Elib.Background */
+      color: rgb(240, 240, 240);
+    }
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 220px;
+      height: 100vh;
+      background-color: rgb(36, 36, 36);    /* Elib.Header */
+      border-right: 1px solid rgb(56, 56, 56); /* Elib.Scroller */
+      display: flex;
+      flex-direction: column;
+      padding-top: 1rem;
+    }
+    .sidebar a {
+      text-decoration: none;
+    }
+    .sidebar .nav-item {
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      color: rgb(200, 200, 200);             /* Elib.SecondaryText */
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+    }
+    .sidebar .nav-item:hover {
+      background-color: rgb(56, 56, 56);    /* Elib.Scroller */
+      color: rgb(240, 240, 240);
+    }
+    .sidebar .nav-item.active {
+      background-color: rgb(56, 56, 56);
+      color: rgb(240, 240, 240);
+      font-weight: bold;
+    }
+
+    /* ─────────────── Main Content ─────────────── */
+    .content-wrapper {
+      margin-left: 220px;
+      padding: 1.5rem;
+      width: calc(100% - 220px);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
     .header-bar {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: 1rem;
       padding: 0.5rem 1rem;
-      background-color: rgb(36, 36, 36);     /* Elib.Colors.Header */
+      background-color: rgb(36, 36, 36);    /* Elib.Header */
       border-radius: 4px;
     }
     .header-bar h1 {
@@ -24,138 +78,126 @@
       font-size: 1.5rem;
       color: rgb(240, 240, 240);
     }
-    .header-buttons {
+
+    /* ─────────────── Filters & Table ─────────────── */
+    #games-topbar {
       display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
       align-items: center;
     }
-    .header-buttons > * + * {
-      margin-left: 2rem;
+    #games-topbar .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
-    .header-buttons button {
-      font-size: 0.9rem;
+    #games-topbar select,
+    #games-topbar input[type="text"] {
+      background-color: rgb(36, 36, 36);
+      color: rgb(240, 240, 240);
+      border: 1px solid rgb(56, 56, 56);
       border-radius: 4px;
-      border: none;
-      cursor: pointer;
-      padding: 0.4rem 0.8rem;
-      transition: opacity 0.2s ease;
-    }
-    .header-buttons button:hover {
-      opacity: 0.85;
-    }
-    .btn-gray {
-      background-color: rgb(120, 120, 120);  /* Elib.Colors.Disabled */
-      color: rgb(240, 240, 240);
-    }
-    .btn-red {
-      background-color: rgb(190, 65, 65);    /* Elib.Colors.Negative */
-      color: rgb(240, 240, 240);
+      padding: 0.5rem;
+      font-size: 1rem;
     }
 
-    /* ─────────────── Manage Games Form ─────────────── */
-    #manage-container {
-      background-color: rgb(36, 36, 36);      /* Elib.Colors.Header */
-      border: 1px solid rgb(56, 56, 56);      /* Elib.Colors.Scroller */
-      border-radius: 4px;
-      padding: 1rem;
-    }
-    #games-list {
-      list-style: none;
-      padding: 0;
-      margin: 0 0 1rem 0;
-    }
-    #games-list li {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid rgb(56, 56, 56);
-    }
-    #games-list li:last-child {
-      border-bottom: none;
-    }
-    .remove-game-button {
-      background-color: rgb(190, 65, 65);   /* Elib.Colors.Negative */
-      color: rgb(240, 240, 240);
-      font-size: 0.8rem;
-      padding: 0.25rem 0.5rem;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .remove-game-button:hover {
-      opacity: 0.85;
-    }
-    #add-game-option-form {
-      display: flex;
-      gap: 0.5rem;
-      margin-top: 1rem;
-    }
-    #add-game-option-form input[type="text"] {
-      flex: 1;
-      background-color: rgb(36, 36, 36);    /* Elib.Colors.Header */
-      color: rgb(240, 240, 240);
-      border: 1px solid rgb(56, 56, 56);    /* Elib.Colors.Scroller */
-      border-radius: 4px;
-      padding: 0.4rem;
-      font-size: 1rem;
-    }
-    #add-game-option-form button {
-      background-color: rgb(70, 175, 70);   /* Elib.Colors.Positive */
-      color: rgb(240, 240, 240);
-      border: none;
-      padding: 0.5rem 1rem;
-      font-size: 1rem;
-      cursor: pointer;
-      border-radius: 4px;
-      transition: opacity 0.2s ease;
-    }
-    #add-game-option-form button:hover {
-      opacity: 0.85;
-    }
-    .error {
-      color: rgb(190, 65, 65);              /* Elib.Colors.Negative */
+    table {
+      width: 100%;
+      border-collapse: collapse;
       margin-top: 0.5rem;
+    }
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid rgb(56, 56, 56);
+      font-size: 0.95rem;
+    }
+    th {
+      background-color: rgb(36, 36, 36);
+      color: rgb(240, 240, 240);
+    }
+    tr:hover {
+      background-color: rgb(56, 56, 56);
+    }
+    .delete-button {
+      background-color: rgb(190, 65, 65);   /* Elib.Negative */
+      color: rgb(240, 240, 240);
+      border: none;
+      border-radius: 4px;
+      padding: 0.3rem 0.6rem;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .delete-button:hover {
+      opacity: 0.85;
+    }
+
+    .no-games {
+      margin-top: 1rem;
+      color: rgb(200, 200, 200);
     }
   </style>
 </head>
-<body data-page="admin-manage">
-  <!-- ─────────────── Header Bar ─────────────── -->
-  <div class="header-bar">
-    <h1>Manage Games</h1>
-    <div class="header-buttons">
-      <a href="admin.html"><button class="btn-gray">← Back to Admin</button></a>
-      <button id="logout-button" class="btn-red">Log Out</button>
+<body data-page="manage_games">
+
+  <!-- ─────────────── Sidebar ─────────────── -->
+  <div class="sidebar">
+    <a href="dashboard.html"><div class="nav-item">📊 Dashboard</div></a>
+    <a href="admin.html"><div class="nav-item">➕ Add Game</div></a>
+    <a href="manage_games.html"><div class="nav-item active">🎮 Manage Games</div></a>
+    <a href="manage_seasons.html"><div class="nav-item">🗓 Manage Seasons</div></a>
+    <a href="index.html"><div class="nav-item">🔙 Back to Leaderboard</div></a>
+    <button id="logout-button" class="nav-item" style="background:none; border:none; width:100%; text-align:left; color:rgb(200,200,200);">🚪 Log Out</button>
+  </div>
+
+  <!-- ─────────────── Main Content Wrapper ─────────────── -->
+  <div class="content-wrapper">
+    <div class="header-bar">
+      <h1>Manage Games</h1>
+    </div>
+
+    <div class="content">
+      <!-- Top: Filters -->
+      <div id="games-topbar">
+        <div class="filter-group">
+          <label for="season-filter"><strong>Season:</strong></label>
+          <select id="season-filter">
+            <option value="__all__">All</option>
+            <!-- Populated by JS -->
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="game-filter"><strong>Game:</strong></label>
+          <select id="game-filter">
+            <option value="__all__">All</option>
+            <!-- Populated by JS -->
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="search-input"><strong>Search Player:</strong></label>
+          <input type="text" id="search-input" placeholder="Player name…" />
+        </div>
+      </div>
+
+      <!-- Bottom: Table -->
+      <div id="games-container">
+        <p class="no-games">Loading games…</p>
+      </div>
     </div>
   </div>
 
-  <!-- ─────────────── Games List & Add Form ─────────────── -->
-  <div id="manage-container">
-    <ul id="games-list">
-      <!-- JS will populate existing options here as: 
-           <li>War Selection <button class="remove-game-button">Remove</button></li> 
-      -->
-    </ul>
-
-    <form id="add-game-option-form">
-      <input type="text" id="new-game-name" placeholder="New game name…" required />
-      <button type="submit">Add</button>
-    </form>
-    <div id="manage-error" class="error"></div>
-  </div>
-
   <script>
-    // Only local JS needed for manage_games.html
+    const GITHUB_USERNAME         = "EveHaddox";
+    const REPO_NAME               = "Games-Leaderboard";
+    const RAW_BASE_URL            = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main`;
+    const API_BASE_URL            = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}`;
+    const GAMES_JSON_PATH         = "games.json";
+    const SEASONS_PATH            = "seasons.json";
+    const GAME_OPTIONS_PATH       = "gameOptions.json";
     const LOCAL_STORAGE_TOKEN_KEY = "github_access_token";
-    const GAME_OPTIONS_PATH = "gameOptions.json";
-    const API_BASE_URL = `https://api.github.com/repos/EveHaddox/Games-Leaderboard`;
-
-    function logout() {
-      localStorage.removeItem(LOCAL_STORAGE_TOKEN_KEY);
-      window.location.href = "index.html";
-    }
 
     async function fetchJSON(path) {
-      const url = `https://raw.githubusercontent.com/EveHaddox/Games-Leaderboard/main/${path}?cachebust=${Date.now()}`;
+      const url = `${RAW_BASE_URL}/${path}?cachebust=${Date.now()}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Failed to fetch ${path}`);
       return await res.json();
@@ -166,8 +208,11 @@
       const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
       const headers = { Accept: "application/vnd.github.v3+json" };
       if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
       const res = await fetch(endpoint, { headers });
-      if (res.status === 404) return { sha: null, content: btoa("[]") };
+      if (res.status === 404) {
+        return { sha: null, content: btoa("[]") };
+      }
       if (!res.ok) {
         const msg = await res.text();
         throw new Error(`GitHub API error (${path}): ${msg}`);
@@ -178,7 +223,8 @@
 
     async function commitJSON(newArray, path, commitMessage) {
       const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
-      if (!accessToken) throw new Error("No GitHub token found. Please login first.");
+      if (!accessToken) throw new Error("No GitHub token found. Please log in first.");
+
       const { sha, content: oldBase64 } = await getFileSHAandContent(path);
       const newContentString = JSON.stringify(newArray, null, 2);
       const newContentBase64 = btoa(unescape(encodeURIComponent(newContentString)));
@@ -190,6 +236,7 @@
         ...(sha ? { sha } : {}),
         branch: "main"
       };
+
       const res = await fetch(endpoint, {
         method: "PUT",
         headers: {
@@ -199,85 +246,181 @@
         },
         body: JSON.stringify(body)
       });
+
       if (!res.ok) {
         const errText = await res.text();
-        throw new Error(`GitHub commit failed (${path}): ${errText}`);
+        throw new Error(`GitHub commit failed: ${errText}`);
       }
       return await res.json();
     }
 
-    async function renderGameOptions() {
-      const list = document.getElementById("games-list");
-      list.innerHTML = "";
-      let options;
+    function logout() {
+      localStorage.removeItem(LOCAL_STORAGE_TOKEN_KEY);
+      window.location.href = "index.html";
+    }
+    document.getElementById("logout-button").onclick = logout;
+
+    async function renderGamesList() {
+      const container = document.getElementById("games-container");
+      container.innerHTML = "<p class=\"no-games\">Loading games…</p>";
+
+      let [games, seasons, gameNames] = [[], { all: [] }, []];
       try {
-        options = await fetchJSON(GAME_OPTIONS_PATH);
+        [games, seasons, gameNames] = await Promise.all([
+          fetchJSON(GAMES_JSON_PATH),
+          fetchJSON(SEASONS_PATH),
+          fetchJSON(GAME_OPTIONS_PATH)
+        ]);
       } catch (err) {
-        document.getElementById("manage-error").innerText = "Error loading options: " + err;
+        container.innerHTML = `<p class="no-games">Error loading data: ${err.message}</p>`;
         return;
       }
-      options.forEach((gameName, idx) => {
-        const li = document.createElement("li");
-        const span = document.createElement("span");
-        span.innerText = gameName;
-        li.appendChild(span);
 
-        // Allow removal of any option
-        const btn = document.createElement("button");
-        btn.className = "remove-game-button";
-        btn.innerText = "Remove";
-        btn.addEventListener("click", () => removeGameOption(idx));
-        li.appendChild(btn);
+      populateFilters(seasons.all, gameNames);
 
-        list.appendChild(li);
+      if (!games.length) {
+        container.innerHTML = "<p class=\"no-games\">No games recorded.</p>";
+        return;
+      }
+
+      const seasonFilterVal = document.getElementById("season-filter").value;
+      const gameFilterVal   = document.getElementById("game-filter").value;
+      const searchVal       = document.getElementById("search-input").value.trim().toLowerCase();
+
+      let filtered = games.slice();
+      if (seasonFilterVal !== "__all__") {
+        filtered = filtered.filter((g) => g.season === seasonFilterVal);
+      }
+      if (gameFilterVal !== "__all__") {
+        filtered = filtered.filter((g) => g.gameName === gameFilterVal);
+      }
+      if (searchVal) {
+        filtered = filtered.filter((g) =>
+          g.teams.some((team) =>
+            team.some((p) => p.toLowerCase().includes(searchVal))
+          )
+        );
+      }
+
+      if (!filtered.length) {
+        container.innerHTML = "<p class=\"no-games\">No games match the filters.</p>";
+        return;
+      }
+
+      const table = document.createElement("table");
+      const headerRow = document.createElement("tr");
+      ["#", "Date/Time", "Season", "Game Name", "Teams", "Winner", "Actions"].forEach((heading) => {
+        const th = document.createElement("th");
+        th.innerText = heading;
+        headerRow.appendChild(th);
+      });
+      table.appendChild(headerRow);
+
+      filtered.forEach((game, idx) => {
+        const tr = document.createElement("tr");
+
+        const idxCell = document.createElement("td");
+        idxCell.innerText = (idx + 1).toString();
+        tr.appendChild(idxCell);
+
+        const dtCell = document.createElement("td");
+        const dt = new Date(game.timestamp);
+        dtCell.innerText = dt.toUTCString().replace(/ GMT$/, "");
+        tr.appendChild(dtCell);
+
+        const seasonCell = document.createElement("td");
+        seasonCell.innerText = game.season || "";
+        tr.appendChild(seasonCell);
+
+        const nameCell = document.createElement("td");
+        nameCell.innerText = game.gameName;
+        tr.appendChild(nameCell);
+
+        const teamsCell = document.createElement("td");
+        teamsCell.innerHTML = game.teams
+          .map((teamArr) => teamArr.join(", "))
+          .join("<br />");
+        tr.appendChild(teamsCell);
+
+        const winCell = document.createElement("td");
+        const winners = game.teams[game.winningTeamIndex] || [];
+        winCell.innerText = winners.join(", ");
+        tr.appendChild(winCell);
+
+        const actionCell = document.createElement("td");
+        const delBtn = document.createElement("button");
+        delBtn.className = "delete-button";
+        delBtn.innerText = "Delete";
+        delBtn.addEventListener("click", () => confirmAndDelete(game, games));
+        actionCell.appendChild(delBtn);
+        tr.appendChild(actionCell);
+
+        table.appendChild(tr);
+      });
+
+      container.innerHTML = "";
+      container.appendChild(table);
+    }
+
+    function populateFilters(allSeasons, allGameNames) {
+      const seasonSelect = document.getElementById("season-filter");
+      const gameSelect   = document.getElementById("game-filter");
+      if (!seasonSelect || !gameSelect) return;
+
+      const prevSeason = seasonSelect.value;
+      seasonSelect.innerHTML = `<option value="__all__">All</option>`;
+      allSeasons.forEach((s) => {
+        const opt = document.createElement("option");
+        opt.value = s;
+        opt.innerText = s;
+        if (s === prevSeason) opt.selected = true;
+        seasonSelect.appendChild(opt);
+      });
+
+      const prevGame = gameSelect.value;
+      gameSelect.innerHTML = `<option value="__all__">All</option>`;
+      allGameNames.forEach((g) => {
+        const opt = document.createElement("option");
+        opt.value = g;
+        opt.innerText = g;
+        if (g === prevGame) opt.selected = true;
+        gameSelect.appendChild(opt);
       });
     }
 
-    async function onAddGameOptionSubmit(event) {
-      event.preventDefault();
-      const input = document.getElementById("new-game-name");
-      const newName = input.value.trim();
-      if (!newName) return;
+    async function confirmAndDelete(gameObj, allGames) {
+      if (!confirm("Are you sure you want to delete this game?")) return;
 
-      try {
-        const { sha, content: oldBase64 } = await getFileSHAandContent(GAME_OPTIONS_PATH);
-        const oldArray = JSON.parse(atob(oldBase64));
-        if (oldArray.includes(newName)) {
-          document.getElementById("manage-error").innerText = "That game already exists.";
-          return;
-        }
-        oldArray.push(newName);
-        await commitJSON(oldArray, GAME_OPTIONS_PATH, `Add game option: ${newName}`);
-        input.value = "";
-        document.getElementById("manage-error").innerText = "";
-        await renderGameOptions();
-      } catch (err) {
-        document.getElementById("manage-error").innerText = "Error adding game: " + err.message;
-      }
-    }
-
-    async function removeGameOption(idx) {
-      try {
-        const { sha, content: oldBase64 } = await getFileSHAandContent(GAME_OPTIONS_PATH);
-        const oldArray = JSON.parse(atob(oldBase64));
-        oldArray.splice(idx, 1);
-        await commitJSON(oldArray, GAME_OPTIONS_PATH, `Remove game option at index ${idx}`);
-        await renderGameOptions();
-      } catch (err) {
-        document.getElementById("manage-error").innerText = "Error removing game: " + err.message;
-      }
-    }
-
-    function initManageGamesPage() {
-      if (!localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY)) {
-        window.location.href = "admin.html";
+      const idx = allGames.findIndex(
+        (g) =>
+          g.timestamp === gameObj.timestamp &&
+          g.gameName === gameObj.gameName &&
+          JSON.stringify(g.teams) === JSON.stringify(gameObj.teams) &&
+          g.winningTeamIndex === gameObj.winningTeamIndex
+      );
+      if (idx === -1) {
+        alert("Game not found.");
         return;
       }
-      renderGameOptions();
-      document.getElementById("logout-button").onclick = logout;
-      document.getElementById("add-game-option-form").onsubmit = onAddGameOptionSubmit;
+
+      const newArray = allGames.slice();
+      newArray.splice(idx, 1);
+
+      try {
+        await commitJSON(newArray, GAMES_JSON_PATH, `Remove game: ${gameObj.gameName} @ ${gameObj.timestamp}`);
+        renderGamesList();
+      } catch (err) {
+        alert("Error deleting game: " + err.message);
+      }
     }
-    document.addEventListener("DOMContentLoaded", initManageGamesPage);
+
+    document.addEventListener("DOMContentLoaded", () => {
+      renderGamesList();
+      document.getElementById("season-filter").addEventListener("change", renderGamesList);
+      document.getElementById("game-filter").addEventListener("change", renderGamesList);
+      document.getElementById("search-input").addEventListener("input", renderGamesList);
+    });
+    window.addEventListener("focus", renderGamesList);
   </script>
 </body>
 </html>

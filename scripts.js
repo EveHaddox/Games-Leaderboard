@@ -101,7 +101,7 @@ function logout() {
 }
 
 
-// ──────────────── ON-LOAD BINDINGS ────────────────
+// ──────────────── ON-LOAD & ON-FOCUS BINDINGS ────────────────
 function initPage() {
   const pageId = document.body.dataset.page;
   if (pageId === "index") {
@@ -116,7 +116,10 @@ function initPage() {
     document.getElementById("add-game-form").onsubmit = onAddGameFormSubmit;
   }
 }
+
+// Run initPage on first load and whenever window/tab regains focus
 document.addEventListener("DOMContentLoaded", initPage);
+window.addEventListener("focus", initPage);
 
 
 // ──────────────── ADMIN PAGE: Populate current season & dropdowns ────────────────
@@ -127,7 +130,7 @@ async function onAdminPageLoad() {
     document.getElementById("post-login-buttons").style.display = "flex";
     document.getElementById("game-form-container").style.display = "block";
 
-    // 1) Fetch seasons.json to get “current” and list of all seasons
+    // 1) Fetch seasons.json to get “current”
     let seasonsData;
     try {
       seasonsData = await fetchJSON(SEASONS_PATH);
@@ -135,7 +138,7 @@ async function onAdminPageLoad() {
       console.warn("Could not fetch seasons.json:", err);
       seasonsData = { current: "", all: [] };
     }
-    const { current, all } = seasonsData;
+    const { current } = seasonsData;
 
     // 2) Populate the read-only current season display & hidden input
     const displayDiv = document.getElementById("current-season-display");
@@ -295,8 +298,7 @@ function removeTeamSection(idx) {
   const teamsContainer = document.getElementById("teams-container");
   let teamDivs = Array.from(teamsContainer.querySelectorAll(".team-section"));
 
-  if (idx < 2) return;
-
+  if (idx < 2) return; // don’t remove the first two
   const teamToRemove = teamDivs[idx];
   teamsContainer.removeChild(teamToRemove);
 
@@ -388,8 +390,7 @@ function updateWinningTeamOptions() {
 async function onAddGameFormSubmit(event) {
   event.preventDefault();
 
-  // Season is a hidden field, already set to “current”
-  const season = document.getElementById("season").value;
+  const season = document.getElementById("season").value;   // hidden, set to current
   const gameName = document.getElementById("gameName").value;
   const winningTeamIndex = parseInt(
     document.getElementById("winningTeam").value,
@@ -497,7 +498,7 @@ async function initLeaderboardPage() {
     });
   }
 
-  // 4) Initial render: season = current season, game = "__all__"
+  // 4) Initial render: pull out whatever season is selected (if any), else “”
   const initialSeason = document.getElementById("season-filter")?.value || "";
   renderLeaderboard(initialSeason, "__all__");
 }
@@ -570,7 +571,7 @@ function computePlayerStats(gamesArray) {
 
 /**
  * Render the leaderboard table, filtered by season & gameName.
- * @param {string} seasonFilter - a specific season name.
+ * @param {string} seasonFilter - e.g. "2023-2024" or "" for no season‐filter.
  * @param {string} gameFilter - "__all__" or a specific gameName.
  */
 async function renderLeaderboard(seasonFilter, gameFilter) {
@@ -582,23 +583,28 @@ async function renderLeaderboard(seasonFilter, gameFilter) {
     return;
   }
 
-  // 1) Filter by season
-  let filteredGames = allGames.filter((g) => g.season === seasonFilter);
+  // 1) Start with all games
+  let filteredGames = allGames;
 
-  // 2) Filter by game if requested
+  // 2) If seasonFilter is non‐empty, filter by it
+  if (seasonFilter) {
+    filteredGames = filteredGames.filter((g) => g.season === seasonFilter);
+  }
+
+  // 3) If gameFilter is not "__all__", further filter by gameName
   if (gameFilter && gameFilter !== "__all__") {
     filteredGames = filteredGames.filter((g) => g.gameName === gameFilter);
   }
 
-  // 3) Compute stats on filteredGames
+  // 4) Compute stats on filteredGames
   const statsMap = computePlayerStats(filteredGames);
 
-  // 4) Convert to array and sort by wins desc, then played desc
+  // 5) Convert to array and sort by wins desc, then played desc
   const rows = Array.from(statsMap.entries())
     .map(([player, s]) => ({ player, ...s }))
     .sort((a, b) => b.wins - a.wins || b.played - a.played);
 
-  // 5) Build HTML table
+  // 6) Build HTML table
   const table = document.createElement("table");
   const headerRow = document.createElement("tr");
   ["Player", "Wins", "Losses", "Played"].forEach((heading) => {

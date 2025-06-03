@@ -5,18 +5,61 @@
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Manage Seasons – Game Tracker</title>
+  <title>Admin – Manage Seasons</title>
   <link rel="stylesheet" href="style.css" />
-
   <style>
-    /* ─────────────── Header Bar ─────────────── */
+    /* ─────────────── Sidebar & Layout ─────────────── */
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: rgb(26, 26, 26); /* Elib.Background */
+      color: rgb(240, 240, 240);
+    }
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 220px;
+      height: 100vh;
+      background-color: rgb(36, 36, 36);    /* Elib.Header */
+      border-right: 1px solid rgb(56, 56, 56); /* Elib.Scroller */
+      display: flex;
+      flex-direction: column;
+      padding-top: 1rem;
+    }
+    .sidebar a {
+      text-decoration: none;
+    }
+    .sidebar .nav-item {
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      color: rgb(200, 200, 200);             /* Elib.SecondaryText */
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+    }
+    .sidebar .nav-item:hover {
+      background-color: rgb(56, 56, 56);    /* Elib.Scroller */
+      color: rgb(240, 240, 240);
+    }
+    .sidebar .nav-item.active {
+      background-color: rgb(56, 56, 56);
+      color: rgb(240, 240, 240);
+      font-weight: bold;
+    }
+    .content {
+      margin-left: 220px;
+      padding: 1.5rem;
+      width: calc(100% - 220px);
+    }
     .header-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 1rem;
       padding: 0.5rem 1rem;
-      background-color: rgb(36, 36, 36);     /* Elib.Colors.Header */
+      background-color: rgb(36, 36, 36);     /* Elib.Header */
       border-radius: 4px;
     }
     .header-bar h1 {
@@ -29,7 +72,7 @@
       align-items: center;
     }
     .header-buttons > * + * {
-      margin-left: 2rem;
+      margin-left: 1rem;
     }
     .header-buttons button {
       font-size: 0.9rem;
@@ -43,18 +86,50 @@
       opacity: 0.85;
     }
     .btn-gray {
-      background-color: rgb(120, 120, 120);  /* Elib.Colors.Disabled */
+      background-color: rgb(120, 120, 120);  /* Elib.Disabled */
       color: rgb(240, 240, 240);
     }
     .btn-red {
-      background-color: rgb(190, 65, 65);    /* Elib.Colors.Negative */
+      background-color: rgb(190, 65, 65);    /* Elib.Negative */
       color: rgb(240, 240, 240);
     }
 
-    /* ─────────────── Manage Seasons Form ─────────────── */
+    /* ─────────────── Current Season Selector ─────────────── */
+    #current-season-container {
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    #current-season-select {
+      background-color: rgb(36, 36, 36);    /* Elib.Header */
+      color: rgb(240, 240, 240);
+      border: 1px solid rgb(56, 56, 56);    /* Elib.Scroller */
+      border-radius: 4px;
+      padding: 0.4rem;
+      font-size: 1rem;
+      min-width: 200px;
+    }
+    #set-current-button {
+      background-color: rgb(70, 175, 70);   /* Elib.Positive */
+      color: rgb(240, 240, 240);
+      border: none;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: opacity 0.2s ease;
+      width: 150px;
+      text-align: center;
+    }
+    #set-current-button:hover {
+      opacity: 0.85;
+    }
+
+    /* ─────────────── Seasons List & Add Form ─────────────── */
     #manage-container {
-      background-color: rgb(36, 36, 36);      /* Elib.Colors.Header */
-      border: 1px solid rgb(56, 56, 56);      /* Elib.Colors.Scroller */
+      background-color: rgb(36, 36, 36);      /* Elib.Header */
+      border: 1px solid rgb(56, 56, 56);      /* Elib.Scroller */
       border-radius: 4px;
       padding: 1rem;
     }
@@ -62,19 +137,24 @@
       list-style: none;
       padding: 0;
       margin: 0 0 1rem 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
     }
     #seasons-list li {
+      background-color: rgb(56, 56, 56);
+      border-radius: 4px;
+      padding: 0.5rem 1rem;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid rgb(56, 56, 56);
+      gap: 0.5rem;
     }
-    #seasons-list li:last-child {
-      border-bottom: none;
+    #seasons-list li span {
+      color: rgb(240, 240, 240);
+      font-size: 0.95rem;
     }
     .remove-season-button {
-      background-color: rgb(190, 65, 65);   /* Elib.Colors.Negative */
+      background-color: rgb(190, 65, 65);   /* Elib.Negative */
       color: rgb(240, 240, 240);
       font-size: 0.8rem;
       padding: 0.25rem 0.5rem;
@@ -85,6 +165,7 @@
     .remove-season-button:hover {
       opacity: 0.85;
     }
+
     #add-season-form {
       display: flex;
       gap: 0.5rem;
@@ -92,15 +173,16 @@
     }
     #add-season-form input[type="text"] {
       flex: 1;
-      background-color: rgb(36, 36, 36);    /* Elib.Colors.Header */
+      background-color: rgb(36, 36, 36);    /* Elib.Header */
       color: rgb(240, 240, 240);
-      border: 1px solid rgb(56, 56, 56);    /* Elib.Colors.Scroller */
+      border: 1px solid rgb(56, 56, 56);    /* Elib.Scroller */
       border-radius: 4px;
       padding: 0.4rem;
       font-size: 1rem;
+      min-width: 200px;
     }
     #add-season-form button {
-      background-color: rgb(70, 175, 70);   /* Elib.Colors.Positive */
+      background-color: rgb(70, 175, 70);   /* Elib.Positive */
       color: rgb(240, 240, 240);
       border: none;
       padding: 0.5rem 1rem;
@@ -113,34 +195,60 @@
       opacity: 0.85;
     }
     .error {
-      color: rgb(190, 65, 65);              /* Elib.Colors.Negative */
+      color: rgb(190, 65, 65);              /* Elib.Negative */
       margin-top: 0.5rem;
     }
   </style>
 </head>
 <body>
-  <!-- ─────────────── Header Bar ─────────────── -->
-  <div class="header-bar">
-    <h1>Manage Seasons</h1>
-    <div class="header-buttons">
-      <a href="admin.html"><button class="btn-gray">← Back to Admin</button></a>
-      <button id="logout-button" class="btn-red">Log Out</button>
-    </div>
+
+  <!-- ─────────────── Sidebar ─────────────── -->
+  <div class="sidebar">
+    <a href="dashboard.html">
+      <div class="nav-item">📊 Dashboard</div>
+    </a>
+    <a href="admin.html">
+      <div class="nav-item">➕ Add Game</div>
+    </a>
+    <a href="manage_games.html">
+      <div class="nav-item">🎮 Manage Games</div>
+    </a>
+    <a href="manage_seasons.html">
+      <div class="nav-item active">🗓 Manage Seasons</div>
+    </a>
+    <a href="index.html">
+      <div class="nav-item">🔙 Back to Leaderboard</div>
+    </a>
+    <button id="logout-button" class="nav-item" style="background:none; border:none; width:100%; text-align:left; color:rgb(200,200,200);">
+      🚪 Log Out
+    </button>
   </div>
 
-  <!-- ─────────────── Seasons List & Add Form ─────────────── -->
-  <div id="manage-container">
-    <ul id="seasons-list">
-      <!-- JS will populate existing seasons here as: 
-           <li>2022-2023 <button class="remove-season-button">Remove</button></li> 
-      -->
-    </ul>
+  <!-- ─────────────── Main Content ─────────────── -->
+  <div class="content">
+    <div class="header-bar">
+      <h1>Manage Seasons</h1>
+    </div>
 
-    <form id="add-season-form">
-      <input type="text" id="new-season-name" placeholder="New season (e.g. 2024-2025)" required />
-      <button type="submit">Add</button>
-    </form>
-    <div id="manage-error" class="error"></div>
+    <!-- Current Season Dropdown + Button -->
+    <div id="current-season-container">
+      <label for="current-season-select"><strong>Current Season:</strong></label>
+      <select id="current-season-select">
+        <!-- Populated by JS -->
+      </select>
+      <button id="set-current-button">Set Current</button>
+    </div>
+
+    <!-- Seasons List & Add Form -->
+    <div id="manage-container">
+      <ul id="seasons-list"></ul>
+
+      <form id="add-season-form">
+        <input type="text" id="new-season-name" placeholder="New season (e.g. 2024-2025)" required />
+        <button type="submit">Add</button>
+      </form>
+      <div id="manage-error" class="error"></div>
+    </div>
   </div>
 
   <script>
@@ -166,7 +274,9 @@
       const headers = { Accept: "application/vnd.github.v3+json" };
       if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
       const res = await fetch(endpoint, { headers });
-      if (res.status === 404) return { sha: null, content: btoa(JSON.stringify({ current: "", all: [] })) };
+      if (res.status === 404) {
+        return { sha: null, content: btoa(JSON.stringify({ current: "", all: [] })) };
+      }
       if (!res.ok) {
         const msg = await res.text();
         throw new Error(`GitHub API error (${path}): ${msg}`);
@@ -205,10 +315,13 @@
       return await res.json();
     }
 
-    // Render list of seasons, marking the current one
-    async function renderSeasonsList() {
+    async function renderSeasonsUI() {
+      const select = document.getElementById("current-season-select");
       const list = document.getElementById("seasons-list");
+
+      select.innerHTML = "";
       list.innerHTML = "";
+
       let data;
       try {
         data = await fetchJSON(SEASONS_PATH);
@@ -217,29 +330,33 @@
         return;
       }
       const { current, all } = data;
+
+      // Populate current-season <select>
+      all.forEach((seasonName) => {
+        const opt = document.createElement("option");
+        opt.value = seasonName;
+        opt.innerText = seasonName;
+        if (seasonName === current) opt.selected = true;
+        select.appendChild(opt);
+      });
+
+      // Populate the list below
       all.forEach((seasonName, idx) => {
         const li = document.createElement("li");
         const span = document.createElement("span");
         span.innerText = seasonName + (seasonName === current ? " (current)" : "");
         li.appendChild(span);
 
-        // Remove button for all seasons
         const btn = document.createElement("button");
         btn.className = "remove-season-button";
         btn.innerText = "Remove";
         btn.addEventListener("click", () => removeSeason(idx));
         li.appendChild(btn);
 
-        // If not current, clicking the span sets that as current
-        if (seasonName !== current) {
-          span.style.cursor = "pointer";
-          span.addEventListener("click", () => setCurrentSeason(idx));
-        }
         list.appendChild(li);
       });
     }
 
-    // Add a new season
     async function onAddSeasonSubmit(event) {
       event.preventDefault();
       const input = document.getElementById("new-season-name");
@@ -249,23 +366,26 @@
       try {
         const { sha, content: oldBase64 } = await getFileSHAandContent(SEASONS_PATH);
         const data = JSON.parse(atob(oldBase64));
-        const { current, all } = data;
+        const { all } = data;
+
         if (all.includes(newName)) {
           document.getElementById("manage-error").innerText = "That season already exists.";
           return;
         }
+
+        // New season becomes current
         const newAll = all.concat(newName);
-        const newObj = { current: current || newName, all: newAll };
-        await commitJSON(newObj, SEASONS_PATH, `Add season: ${newName}`);
+        const newObj = { current: newName, all: newAll };
+
+        await commitJSON(newObj, SEASONS_PATH, `Add and set current season: ${newName}`);
         input.value = "";
         document.getElementById("manage-error").innerText = "";
-        await renderSeasonsList();
+        await renderSeasonsUI();
       } catch (err) {
         document.getElementById("manage-error").innerText = "Error adding season: " + err.message;
       }
     }
 
-    // Remove a season by index
     async function removeSeason(idx) {
       try {
         const { sha, content: oldBase64 } = await getFileSHAandContent(SEASONS_PATH);
@@ -273,28 +393,29 @@
         const { current, all } = data;
         const newAll = all.slice();
         const removed = newAll.splice(idx, 1)[0];
+
         let newCurrent = current;
         if (removed === current) {
           newCurrent = newAll.length ? newAll[0] : "";
         }
         const newObj = { current: newCurrent, all: newAll };
         await commitJSON(newObj, SEASONS_PATH, `Remove season: ${removed}`);
-        await renderSeasonsList();
+        await renderSeasonsUI();
       } catch (err) {
         document.getElementById("manage-error").innerText = "Error removing season: " + err.message;
       }
     }
 
-    // Set current season by index
-    async function setCurrentSeason(idx) {
+    async function onSetCurrentSubmit() {
+      const select = document.getElementById("current-season-select");
+      const newCurrent = select.value;
       try {
         const { sha, content: oldBase64 } = await getFileSHAandContent(SEASONS_PATH);
         const data = JSON.parse(atob(oldBase64));
         const { all } = data;
-        const newCurrent = all[idx];
         const newObj = { current: newCurrent, all: all };
         await commitJSON(newObj, SEASONS_PATH, `Set current season: ${newCurrent}`);
-        await renderSeasonsList();
+        await renderSeasonsUI();
       } catch (err) {
         document.getElementById("manage-error").innerText = "Error setting current season: " + err.message;
       }
@@ -305,9 +426,10 @@
         window.location.href = "admin.html";
         return;
       }
-      renderSeasonsList();
+      renderSeasonsUI();
       document.getElementById("logout-button").onclick = logout;
       document.getElementById("add-season-form").onsubmit = onAddSeasonSubmit;
+      document.getElementById("set-current-button").onclick = onSetCurrentSubmit;
     }
 
     document.addEventListener("DOMContentLoaded", initManageSeasonsPage);

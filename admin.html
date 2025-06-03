@@ -5,18 +5,76 @@
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Panel – Game Tracker</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Admin – Add Game</title>
 
   <style>
-    /* ─────────────── Header Bar ─────────────── */
+    /* ─────────────── Sidebar & Layout ─────────────── */
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: rgb(26, 26, 26); /* Elib.Background */
+      color: rgb(240, 240, 240);
+    }
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 220px;
+      height: 100vh;
+      background-color: rgb(36, 36, 36);      /* Elib.Header */
+      border-right: 1px solid rgb(56, 56, 56); /* Elib.Scroller */
+      display: flex;
+      flex-direction: column;
+      padding-top: 1rem;
+    }
+    .sidebar a {
+      text-decoration: none;
+    }
+    .sidebar .nav-item {
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      color: rgb(200, 200, 200);               /* Elib.SecondaryText */
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+    }
+    .sidebar .nav-item:hover {
+      background-color: rgb(56, 56, 56);      /* Elib.Scroller */
+      color: rgb(240, 240, 240);
+    }
+    .sidebar .nav-item.active {
+      background-color: rgb(56, 56, 56);
+      color: rgb(240, 240, 240);
+      font-weight: bold;
+    }
+
+    /* ─────────────── Main Content ─────────────── */
+    .content-wrapper {
+      margin-left: 220px;
+      padding: 1.5rem;
+      width: calc(100% - 220px);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .content {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: rgb(36, 36, 36);
+      border: 1px solid rgb(56, 56, 56);
+      border-radius: 8px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
     .header-bar {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: 1rem;
       padding: 0.5rem 1rem;
-      background-color: rgb(36, 36, 36);
+      background-color: rgb(36, 36, 36);     /* Elib.Header */
       border-radius: 4px;
     }
     .header-bar h1 {
@@ -24,61 +82,36 @@
       font-size: 1.5rem;
       color: rgb(240, 240, 240);
     }
-    .header-buttons {
-      display: flex;
-      align-items: center;
-    }
-    .header-buttons > * + * {
-      margin-left: 2rem;
-    }
-    .header-buttons input[type="password"] {
-      max-width: 200px;
-      background-color: rgb(56, 56, 56);
-      color: rgb(240, 240, 240);
-      border: 1px solid rgb(56, 56, 56);
-      border-radius: 4px;
-      padding: 0.3rem 0.5rem;
-    }
-    .header-buttons button {
-      font-size: 0.9rem;
-      border-radius: 4px;
-      border: none;
-      cursor: pointer;
-      padding: 0.4rem 0.8rem;
-      transition: opacity 0.2s ease;
-    }
-    .header-buttons button:hover {
-      opacity: 0.85;
-    }
 
-    /* ─────────────── Add Game Form ─────────────── */
+    /* ─────────────── Add Game Form Styling ─────────────── */
+    .form-group label {
+      display: block;
+      margin-bottom: 0.25rem;
+      color: rgb(200, 200, 200);
+      font-weight: bold;
+    }
     .form-group select,
-    .form-group input[type="text"] {
+    .form-group input[type="text"],
+    .form-group input[type="submit"],
+    .form-group button {
       background-color: rgb(36, 36, 36);
       color: rgb(240, 240, 240);
       border: 1px solid rgb(56, 56, 56);
       border-radius: 4px;
       font-size: 1rem;
-      padding: 0.4rem;
-      margin-bottom: 0.5rem;
+      padding: 0.5rem;
       width: 100%;
       box-sizing: border-box;
     }
-    .readonly-field {
-      background-color: rgb(56, 56, 56);
-      color: rgb(200, 200, 200);
-      border-radius: 4px;
-      padding: 0.5rem;
-      margin-bottom: 1rem;
+    .form-group input[type="submit"],
+    .form-group button {
+      cursor: pointer;
     }
-
-    /* ─────────────── Team Sections ─────────────── */
     .team-section {
-      background-color: rgb(36, 36, 36);
-      border: 1px solid rgb(56, 56, 56);
-      border-radius: 4px;
-      margin-bottom: 1rem;
+      background-color: rgb(56, 56, 56);
+      border-radius: 6px;
       padding: 0.75rem;
+      margin-bottom: 1rem;
     }
     .team-header-container {
       display: flex;
@@ -88,13 +121,13 @@
     }
     .team-header {
       font-weight: bold;
-      color: rgb(200, 200, 200);
+      color: rgb(240, 240, 240);
     }
     .remove-team-button {
-      background-color: rgb(190, 65, 65);
+      background-color: rgb(190, 65, 65);    /* Elib.Negative */
       color: rgb(240, 240, 240);
-      font-size: 0.8rem;
-      padding: 0.25rem 0.5rem;
+      font-size: 0.85rem;
+      padding: 0.3rem 0.6rem;
       border: none;
       border-radius: 4px;
       cursor: pointer;
@@ -105,106 +138,505 @@
     .player-input {
       display: block;
       margin-bottom: 0.5rem;
-      width: 100%;
-      box-sizing: border-box;
     }
     #add-team-button {
-      margin-top: 0.5rem;
-      margin-bottom: 1rem;
-      background-color: rgb(120, 120, 120);
+      background-color: rgb(120, 120, 120);  /* btn-gray */
+      color: rgb(240, 240, 240);
+      font-size: 1rem;
+      padding: 0.5rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+      box-sizing: border-box;
     }
     #add-team-button:hover {
       opacity: 0.85;
     }
+    #admin-error {
+      color: rgb(190, 65, 65);
+      margin-top: 0.5rem;
+    }
   </style>
 </head>
 <body data-page="admin">
-  <datalist id="player-names-list"></datalist>
-
-  <!-- ─────────────── Header Bar ─────────────── -->
-  <div class="header-bar">
-    <h1>Admin Panel</h1>
-    <div class="header-buttons">
-      <div id="pat-login">
-        <input type="password" id="pat-input" placeholder="Paste PAT here…" />
-        <button id="save-pat-button" class="btn-gray">Save Token</button>
-      </div>
-      <div id="post-login-buttons" style="display: none;">
-        <a href="index.html"><button class="btn-gray">Leaderboard</button></a>
-        <a href="manage_games.html"><button class="btn-gray">Manage Games</button></a>
-        <a href="manage_seasons.html"><button class="btn-gray">Manage Seasons</button></a>
-        <button id="logout-button" class="btn-red">Log Out</button>
-      </div>
-    </div>
+  <!-- ─────────────── Sidebar ─────────────── -->
+  <div class="sidebar">
+    <a href="dashboard.html"><div class="nav-item">📊 Dashboard</div></a>
+    <a href="admin.html"><div class="nav-item active">➕ Add Game</div></a>
+    <a href="manage_games.html"><div class="nav-item">🎮 Manage Games</div></a>
+    <a href="manage_seasons.html"><div class="nav-item">🗓 Manage Seasons</div></a>
+    <a href="index.html"><div class="nav-item">🔙 Back to Leaderboard</div></a>
+    <button id="logout-button" class="nav-item" style="background:none; border:none; width:100%; text-align:left; color:rgb(200,200,200);">🚪 Log Out</button>
   </div>
 
-  <!-- ─────────────── Add Game Form ─────────────── -->
-  <div id="game-form-container" style="display: none;">
-    <form id="add-game-form">
-      <!-- Current Season (read-only) -->
-      <div class="form-group">
-        <label><strong>Season:</strong></label>
-        <div id="current-season-display" class="readonly-field">Loading…</div>
-        <input type="hidden" id="season" name="season" value="" />
-      </div>
+  <!-- ─────────────── Main Content Wrapper ─────────────── -->
+  <div class="content-wrapper">
+    <div class="header-bar">
+      <h1>Add Game</h1>
+    </div>
 
-      <div class="form-group">
-        <label for="gameName"><strong>Game Name:</strong><br />
+    <div class="content">
+      <!-- ─────────────── Add Game Form ─────────────── -->
+      <datalist id="player-names-list"></datalist>
+      <form id="add-game-form">
+        <!-- Current Season (read-only) -->
+        <div class="form-group">
+          <label>Season:</label>
+          <div id="current-season-display" style="
+               background-color: rgb(56,56,56);
+               color: rgb(200,200,200);
+               padding: 0.5rem;
+               border-radius: 4px;
+               margin-bottom: 0.75rem;
+          ">Loading…</div>
+          <input type="hidden" id="season" name="season" />
+        </div>
+
+        <!-- Game Name Dropdown -->
+        <div class="form-group">
+          <label for="gameName">Game Name:</label>
           <select id="gameName" required>
             <option value="" disabled selected>Loading…</option>
           </select>
-        </label>
-      </div>
+        </div>
 
-      <div id="teams-container">
-        <div class="team-section" data-team-index="0">
-          <div class="team-header-container">
-            <div class="team-header">Team 1</div>
+        <!-- Teams (dynamically added) -->
+        <div id="teams-container">
+          <div class="team-section" data-team-index="0">
+            <div class="team-header-container">
+              <div class="team-header">Team 1</div>
+            </div>
+            <div class="players-list">
+              <input
+                type="text"
+                class="player-input"
+                placeholder="Player name…"
+                list="player-names-list"
+              />
+            </div>
           </div>
-          <div class="players-list">
-            <input
-              type="text"
-              class="player-input"
-              placeholder="Player name…"
-              data-player-index="0"
-              list="player-names-list"
-            />
+
+          <div class="team-section" data-team-index="1">
+            <div class="team-header-container">
+              <div class="team-header">Team 2</div>
+            </div>
+            <div class="players-list">
+              <input
+                type="text"
+                class="player-input"
+                placeholder="Player name…"
+                list="player-names-list"
+              />
+            </div>
           </div>
         </div>
 
-        <div class="team-section" data-team-index="1">
-          <div class="team-header-container">
-            <div class="team-header">Team 2</div>
-          </div>
-          <div class="players-list">
-            <input
-              type="text"
-              class="player-input"
-              placeholder="Player name…"
-              data-player-index="0"
-              list="player-names-list"
-            />
-          </div>
-        </div>
-      </div>
+        <button type="button" id="add-team-button">+ Add Team</button>
 
-      <button type="button" id="add-team-button" class="btn-gray">+ Add Team</button>
-
-      <div class="form-group">
-        <label for="winningTeam"><strong>Winning Team:</strong><br />
+        <!-- Winning Team Dropdown -->
+        <div class="form-group">
+          <label for="winningTeam">Winning Team:</label>
           <select id="winningTeam" required>
             <option value="0">Team 1</option>
             <option value="1">Team 2</option>
           </select>
-        </label>
-        <small>This list updates automatically as you add/remove teams.</small>
-      </div>
+          <small style="color: rgb(200,200,200);">List updates automatically as you add/remove teams.</small>
+        </div>
 
-      <input type="submit" value="Add Game" class="btn-red" />
-    </form>
-    <div id="admin-error" class="error"></div>
+        <div class="form-group">
+          <input type="submit" value="Add Game" class="btn-red" />
+        </div>
+      </form>
+      <div id="admin-error"></div>
+    </div>
   </div>
 
-  <script src="scripts.js"></script>
+  <script>
+    const GITHUB_USERNAME         = "EveHaddox";
+    const REPO_NAME               = "Games-Leaderboard";
+    const RAW_BASE_URL            = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main`;
+    const API_BASE_URL            = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}`;
+    const GAMES_JSON_PATH         = "games.json";
+    const GAME_OPTIONS_PATH       = "gameOptions.json";
+    const SEASONS_PATH            = "seasons.json";
+    const LOCAL_STORAGE_TOKEN_KEY = "github_access_token";
+
+    async function fetchJSON(path) {
+      const url = `${RAW_BASE_URL}/${path}?cachebust=${Date.now()}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to fetch ${path}`);
+      return await res.json();
+    }
+
+    async function getFileSHAandContent(path) {
+      const endpoint = `${API_BASE_URL}/contents/${path}`;
+      const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
+      const headers = { Accept: "application/vnd.github.v3+json" };
+      if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+      const res = await fetch(endpoint, { headers });
+      if (res.status === 404) {
+        if (path === SEASONS_PATH) {
+          return { sha: null, content: btoa(JSON.stringify({ current: "", all: [] })) };
+        }
+        return { sha: null, content: btoa("[]") };
+      }
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(`GitHub API error (${path}): ${msg}`);
+      }
+      const data = await res.json();
+      return { sha: data.sha, content: data.content };
+    }
+
+    async function commitJSON(newArrayOrObj, path, commitMessage) {
+      const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
+      if (!accessToken) throw new Error("No GitHub token found. Please paste a valid PAT first.");
+
+      const { sha, content: oldContentBase64 } = await getFileSHAandContent(path);
+      const newContentString = JSON.stringify(newArrayOrObj, null, 2);
+      const newContentBase64 = btoa(unescape(encodeURIComponent(newContentString)));
+
+      const endpoint = `${API_BASE_URL}/contents/${path}`;
+      const body = {
+        message: commitMessage,
+        content: newContentBase64,
+        ...(sha ? { sha } : {}),
+        branch: "main"
+      };
+
+      const res = await fetch(endpoint, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/vndithub.v3+json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`GitHub commit failed (${path}): ${errText}`);
+      }
+      return await res.json();
+    }
+
+    function logout() {
+      localStorage.removeItem(LOCAL_STORAGE_TOKEN_KEY);
+      window.location.href = "index.html";
+    }
+    document.getElementById("logout-button").onclick = logout;
+
+    document.addEventListener("DOMContentLoaded", onAdminPageLoad);
+
+    async function onAdminPageLoad() {
+      const token = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
+      if (!token) {
+        alert("No GitHub token found. Please log in through Manage Games or Manage Seasons first.");
+        return;
+      }
+
+      // 1) Fetch seasons.json to get “current”
+      let seasonsData;
+      try {
+        seasonsData = await fetchJSON(SEASONS_PATH);
+      } catch {
+        seasonsData = { current: "", all: [] };
+      }
+      const currentSeason = seasonsData.current || "(no season defined)";
+      document.getElementById("current-season-display").innerText = currentSeason;
+      document.getElementById("season").value = seasonsData.current;
+
+      // 2) Populate “Game Name” dropdown
+      try {
+        await populateGameDropdown();
+      } catch {
+        const select = document.getElementById("gameName");
+        select.innerHTML = `<option value="" disabled selected>(no games)</option>`;
+      }
+
+      // 3) Populate player datalist
+      try {
+        await populatePlayerDatalist();
+      } catch {
+        // ignore errors
+      }
+
+      // 4) Initialize team inputs
+      initializeTeamInputs();
+      updateWinningTeamOptions();
+
+      // 5) Bind “+ Add Team” and form submit
+      document.getElementById("add-team-button").onclick = addNewTeamSection;
+      document.getElementById("add-game-form").onsubmit = onAddGameFormSubmit;
+    }
+
+    async function populateGameDropdown() {
+      const select = document.getElementById("gameName");
+      select.innerHTML = "";
+      const options = await fetchJSON(GAME_OPTIONS_PATH);
+
+      if (!options || options.length === 0) {
+        select.innerHTML = `<option value="" disabled selected>(no games defined)</option>`;
+        return;
+      }
+
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.innerText = "-- Select Game --";
+      placeholder.disabled = true;
+      placeholder.selected = true;
+      select.appendChild(placeholder);
+
+      options.forEach((gameName) => {
+        const opt = document.createElement("option");
+        opt.value = gameName;
+        opt.innerText = gameName;
+        select.appendChild(opt);
+      });
+    }
+
+    async function populatePlayerDatalist() {
+      const datalist = document.getElementById("player-names-list");
+      datalist.innerHTML = "";
+      const games = await fetchJSON(GAMES_JSON_PATH);
+      const nameSet = new Set();
+      games.forEach((game) => {
+        game.teams.forEach((team) => team.forEach((p) => nameSet.add(p)));
+      });
+      const sortedNames = Array.from(nameSet).sort((a, b) =>
+        a.toLowerCase().localeCompare(b.toLowerCase())
+      );
+      sortedNames.forEach((name) => {
+        const option = document.createElement("option");
+        option.value = name;
+        datalist.appendChild(option);
+      });
+    }
+
+    function appendPlayerInput(playersListDiv) {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "player-input";
+      input.placeholder = "Player name…";
+      input.setAttribute("list", "player-names-list");
+
+      input.addEventListener("input", () => {
+        const allInputs = playersListDiv.querySelectorAll(".player-input");
+        const lastInput = allInputs[allInputs.length - 1];
+        if (input === lastInput && input.value.trim() !== "") {
+          appendPlayerInput(playersListDiv);
+        }
+        cleanUpTrailingEmptyInputs(playersListDiv);
+      });
+
+      playersListDiv.appendChild(input);
+    }
+
+    function cleanUpTrailingEmptyInputs(playersListDiv) {
+      let inputs = Array.from(playersListDiv.querySelectorAll(".player-input"));
+      while (
+        inputs.length >= 2 &&
+        inputs[inputs.length - 1].value.trim() === "" &&
+        inputs[inputs.length - 2].value.trim() === ""
+      ) {
+        const toRemove = inputs.pop();
+        playersListDiv.removeChild(toRemove);
+        inputs = Array.from(playersListDiv.querySelectorAll(".player-input"));
+      }
+    }
+
+    function addNewTeamSection() {
+      const teamsContainer = document.getElementById("teams-container");
+      const existingTeams = teamsContainer.querySelectorAll(".team-section");
+      const newTeamIndex = existingTeams.length;
+
+      const teamDiv = document.createElement("div");
+      teamDiv.className = "team-section";
+      teamDiv.setAttribute("data-team-index", newTeamIndex);
+
+      const headerContainer = document.createElement("div");
+      headerContainer.className = "team-header-container";
+      const header = document.createElement("div");
+      header.className = "team-header";
+      header.innerText = `Team ${newTeamIndex + 1}`;
+      headerContainer.appendChild(header);
+
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "remove-team-button";
+      removeBtn.innerText = "Remove";
+      removeBtn.addEventListener("click", () => removeTeamSection(newTeamIndex));
+      headerContainer.appendChild(removeBtn);
+
+      teamDiv.appendChild(headerContainer);
+      const playersListDiv = document.createElement("div");
+      playersListDiv.className = "players-list";
+      teamDiv.appendChild(playersListDiv);
+
+      appendPlayerInput(playersListDiv);
+      teamsContainer.appendChild(teamDiv);
+      updateWinningTeamOptions();
+    }
+
+    function removeTeamSection(idx) {
+      const teamsContainer = document.getElementById("teams-container");
+      let teamDivs = Array.from(teamsContainer.querySelectorAll(".team-section"));
+
+      if (idx < 2) return; // cannot remove first two
+      const teamToRemove = teamDivs[idx];
+      teamsContainer.removeChild(teamToRemove);
+
+      teamDivs = Array.from(teamsContainer.querySelectorAll(".team-section"));
+      teamDivs.forEach((div, newIndex) => {
+        div.setAttribute("data-team-index", newIndex);
+        const headerDiv = div.querySelector(".team-header");
+        headerDiv.innerText = `Team ${newIndex + 1}`;
+
+        let removeBtn = div.querySelector(".remove-team-button");
+        if (newIndex >= 2) {
+          if (!removeBtn) {
+            const newRemove = document.createElement("button");
+            newRemove.className = "remove-team-button";
+            newRemove.innerText = "Remove";
+            newRemove.addEventListener("click", () => removeTeamSection(newIndex));
+            div.querySelector(".team-header-container").appendChild(newRemove);
+          } else {
+            const newRemove = removeBtn.cloneNode(true);
+            newRemove.addEventListener("click", () => removeTeamSection(newIndex));
+            removeBtn.replaceWith(newRemove);
+          }
+        } else {
+          if (removeBtn) removeBtn.remove();
+        }
+      });
+
+      updateWinningTeamOptions();
+    }
+
+    function initializeTeamInputs() {
+      const teamsContainer = document.getElementById("teams-container");
+      const teamDivs = teamsContainer.querySelectorAll(".team-section");
+
+      teamDivs.forEach((teamDiv, index) => {
+        const playersListDiv = teamDiv.querySelector(".players-list");
+        let inputs = playersListDiv.querySelectorAll(".player-input");
+
+        if (inputs.length === 0) {
+          appendPlayerInput(playersListDiv);
+          inputs = playersListDiv.querySelectorAll(".player-input");
+        }
+
+        inputs.forEach((input) => {
+          if (!input.dataset.bound) {
+            input.setAttribute("list", "player-names-list");
+            input.addEventListener("input", () => {
+              const allInputs = playersListDiv.querySelectorAll(".player-input");
+              const lastInput = allInputs[allInputs.length - 1];
+              if (input === lastInput && input.value.trim() !== "") {
+                appendPlayerInput(playersListDiv);
+              }
+              cleanUpTrailingEmptyInputs(playersListDiv);
+            });
+            input.dataset.bound = "true";
+          }
+        });
+
+        if (index >= 2 && !teamDiv.querySelector(".remove-team-button")) {
+          const headerContainer = teamDiv.querySelector(".team-header-container");
+          const removeBtn = document.createElement("button");
+          removeBtn.className = "remove-team-button";
+          removeBtn.innerText = "Remove";
+          removeBtn.addEventListener("click", () => removeTeamSection(index));
+          headerContainer.appendChild(removeBtn);
+        }
+
+        cleanUpTrailingEmptyInputs(playersListDiv);
+      });
+    }
+
+    function updateWinningTeamOptions() {
+      const select = document.getElementById("winningTeam");
+      const teamsContainer = document.getElementById("teams-container");
+      const teamCount = teamsContainer.querySelectorAll(".team-section").length;
+
+      select.innerHTML = "";
+      for (let i = 0; i < teamCount; i++) {
+        const opt = document.createElement("option");
+        opt.value = i.toString();
+        opt.innerText = `Team ${i + 1}`;
+        select.appendChild(opt);
+      }
+    }
+
+    async function onAddGameFormSubmit(event) {
+      event.preventDefault();
+
+      const season = document.getElementById("season").value;
+      const gameName = document.getElementById("gameName").value;
+      const winningTeamIndex = parseInt(
+        document.getElementById("winningTeam").value,
+        10
+      );
+
+      if (!season) {
+        alert("No current season defined.");
+        return;
+      }
+      if (!gameName) {
+        alert("Please select a game.");
+        return;
+      }
+
+      const teamsContainer = document.getElementById("teams-container");
+      const teamDivs = teamsContainer.querySelectorAll(".team-section");
+      const teams = [];
+
+      teamDivs.forEach((teamDiv) => {
+        const playerInputs = teamDiv.querySelectorAll(".player-input");
+        const names = Array.from(playerInputs)
+          .map((inp) => inp.value.trim())
+          .filter((n) => n !== "");
+        if (names.length > 0) {
+          teams.push(names);
+        }
+      });
+
+      if (teams.length < 2) {
+        alert("Please enter at least two teams, each with at least one player.");
+        return;
+      }
+      if (winningTeamIndex < 0 || winningTeamIndex >= teams.length) {
+        alert("Invalid winning team index.");
+        return;
+      }
+
+      const newGame = {
+        timestamp: new Date().toISOString(),
+        season,
+        gameName,
+        teams,
+        winningTeamIndex,
+      };
+
+      try {
+        const { sha, content: oldBase64 } = await getFileSHAandContent(GAMES_JSON_PATH);
+        const oldArray = JSON.parse(atob(oldBase64));
+
+        const newArray = oldArray.concat(newGame);
+        const commitMsg = `Add game: ${gameName}, season: ${season}, winner: Team ${
+          winningTeamIndex + 1
+        }`;
+        await commitJSON(newArray, GAMES_JSON_PATH, commitMsg);
+
+        alert("Game added successfully!");
+        window.location.reload();
+      } catch (err) {
+        console.error(err);
+        alert("Error adding game: " + err.message);
+      }
+    }
+  </script>
 </body>
 </html>
