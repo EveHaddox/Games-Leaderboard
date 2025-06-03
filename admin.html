@@ -1,4 +1,3 @@
-<!-- admin.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -164,29 +163,19 @@
   <!-- ─────────────── Sidebar ─────────────── -->
   <div class="sidebar">
     <a href="dashboard.html">
-      <div class="nav-item">
-        📊 Dashboard
-      </div>
+      <div class="nav-item">📊 Dashboard</div>
     </a>
     <a href="admin.html">
-      <div class="nav-item active">
-        ➕ Add Game
-      </div>
+      <div class="nav-item active">➕ Add Game</div>
     </a>
     <a href="manage_games.html">
-      <div class="nav-item">
-        🎮 Manage Games
-      </div>
+      <div class="nav-item">🎮 Manage Games</div>
     </a>
     <a href="manage_seasons.html">
-      <div class="nav-item">
-        🗓 Manage Seasons
-      </div>
+      <div class="nav-item">🗓 Manage Seasons</div>
     </a>
     <a href="index.html">
-      <div class="nav-item">
-        🔙 Back to Leaderboard
-      </div>
+      <div class="nav-item">🔙 Back to Leaderboard</div>
     </a>
     <button id="logout-button" class="nav-item" style="background:none; border:none; width:100%; text-align:left; color:rgb(200,200,200);">
       🚪 Log Out
@@ -283,6 +272,8 @@
     const GAME_OPTIONS_PATH       = "gameOptions.json";
     const SEASONS_PATH            = "seasons.json";
     const LOCAL_STORAGE_TOKEN_KEY = "github_access_token";
+
+    // Redirect back to dashboard if not authenticated
     const ensureAuth = () => {
       if (!localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY)) {
         window.location.href = "dashboard.html";
@@ -290,7 +281,6 @@
     };
     document.addEventListener("DOMContentLoaded", ensureAuth);
     window.addEventListener("focus", ensureAuth);
-
 
     /* ──────────────── GENERIC JSON FETCH ──────────────── */
     async function fetchJSON(path) {
@@ -380,8 +370,8 @@
       // 1) Check for PAT in localStorage
       const token = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
       if (!token) {
-        // If no token, redirect back to login or simply show empty
         alert("No GitHub token found. Please log in under 'Manage Games' or 'Manage Seasons' first.");
+        return;
       }
 
       // 2) Fetch seasons.json to get current season
@@ -414,7 +404,7 @@
       initializeTeamInputs();
       updateWinningTeamOptions();
 
-      // 6) Bind form submit
+      // 6) Bind form submit and logout
       document.getElementById("add-game-form").onsubmit = onAddGameFormSubmit;
       document.getElementById("logout-button").onclick = logout;
     }
@@ -683,16 +673,8 @@
         }`;
         await commitJSON(newArray, GAMES_JSON_PATH, commitMsg);
 
-        // ← instead of reload, just clear/reset the form and re-populate any affected dropdowns:
-        alert("Game added successfully!");
-        document.getElementById("add-game-form").reset();
-
-        // Refresh the player datalist so new players appear immediately:
-        await populatePlayerDatalist();
-
-        // Re-initialize team inputs & winningTeam select:
-        initializeTeamInputs();
-        updateWinningTeamOptions();
+        alert("Game added successfully! Redirecting to Manage Games…");
+        window.location.href = "manage_games.html";
       } catch (err) {
         console.error(err);
         alert("Error adding game: " + err.message);
