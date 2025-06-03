@@ -7,14 +7,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin – Manage Games</title>
 
+  <!-- ─────────────── Shared Styles ─────────────── -->
   <style>
-    /* ─────────────── Sidebar & Layout ─────────────── */
     body {
       margin: 0;
       font-family: sans-serif;
       background-color: rgb(26, 26, 26); /* Elib.Background */
       color: rgb(240, 240, 240);
     }
+    /* Sidebar */
     .sidebar {
       position: fixed;
       top: 0;
@@ -49,8 +50,8 @@
       font-weight: bold;
     }
 
-    /* ─────────────── Main Content ─────────────── */
-    .content-wrapper {
+    /* Main content: fills everything to the right of the sidebar */
+    .content {
       margin-left: 220px;
       padding: 1.5rem;
       width: calc(100% - 220px);
@@ -58,19 +59,14 @@
       flex-direction: column;
       gap: 1.5rem;
     }
-    .content {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
 
+    /* Header bar */
     .header-bar {
       display: flex;
+      justify-content: space-between;
       align-items: center;
       padding: 0.5rem 1rem;
-      background-color: rgb(36, 36, 36);    /* Elib.Header */
+      background-color: rgb(36, 36, 36);     /* Elib.Header */
       border-radius: 4px;
     }
     .header-bar h1 {
@@ -78,13 +74,41 @@
       font-size: 1.5rem;
       color: rgb(240, 240, 240);
     }
+    .header-buttons {
+      display: flex;
+      align-items: center;
+    }
+    .header-buttons > * + * {
+      margin-left: 1rem;
+    }
+    .header-buttons button {
+      font-size: 0.9rem;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      padding: 0.4rem 0.8rem;
+      transition: opacity 0.2s ease;
+    }
+    .header-buttons button:hover {
+      opacity: 0.85;
+    }
+    .btn-gray {
+      background-color: rgb(120, 120, 120);  /* Elib.Disabled */
+      color: rgb(240, 240, 240);
+    }
+    .btn-red {
+      background-color: rgb(190, 65, 65);    /* Elib.Negative */
+      color: rgb(240, 240, 240);
+    }
 
-    /* ─────────────── Filters & Table ─────────────── */
+    /* ─────────────── Two-Column Layout ─────────────── */
+    /* Top area: filters/search on left, “actions” or extra info on right */
     #games-topbar {
       display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
+      justify-content: space-between;
       align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
     }
     #games-topbar .filter-group {
       display: flex;
@@ -101,6 +125,7 @@
       font-size: 1rem;
     }
 
+    /* Bottom area: table takes full width */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -120,7 +145,7 @@
       background-color: rgb(56, 56, 56);
     }
     .delete-button {
-      background-color: rgb(190, 65, 65);   /* Elib.Negative */
+      background-color: rgb(190, 65, 65); /* Elib.Negative */
       color: rgb(240, 240, 240);
       border: none;
       border-radius: 4px;
@@ -131,7 +156,6 @@
     .delete-button:hover {
       opacity: 0.85;
     }
-
     .no-games {
       margin-top: 1rem;
       color: rgb(200, 200, 200);
@@ -142,47 +166,63 @@
 
   <!-- ─────────────── Sidebar ─────────────── -->
   <div class="sidebar">
-    <a href="dashboard.html"><div class="nav-item">📊 Dashboard</div></a>
-    <a href="admin.html"><div class="nav-item">➕ Add Game</div></a>
-    <a href="manage_games.html"><div class="nav-item active">🎮 Manage Games</div></a>
-    <a href="manage_seasons.html"><div class="nav-item">🗓 Manage Seasons</div></a>
-    <a href="index.html"><div class="nav-item">🔙 Back to Leaderboard</div></a>
-    <button id="logout-button" class="nav-item" style="background:none; border:none; width:100%; text-align:left; color:rgb(200,200,200);">🚪 Log Out</button>
+    <a href="dashboard.html">
+      <div class="nav-item">📊 Dashboard</div>
+    </a>
+    <a href="admin.html">
+      <div class="nav-item">➕ Add Game</div>
+    </a>
+    <a href="manage_games.html">
+      <div class="nav-item active">🎮 Manage Games</div>
+    </a>
+    <a href="manage_seasons.html">
+      <div class="nav-item">🗓 Manage Seasons</div>
+    </a>
+    <a href="index.html">
+      <div class="nav-item">🔙 Back to Leaderboard</div>
+    </a>
+    <button id="logout-button" class="nav-item" style="background:none; border:none; width:100%; text-align:left; color:rgb(200,200,200);">
+      🚪 Log Out
+    </button>
   </div>
 
-  <!-- ─────────────── Main Content Wrapper ─────────────── -->
-  <div class="content-wrapper">
+  <!-- ─────────────── Main Content ─────────────── -->
+  <div class="content">
+    <!-- Header -->
     <div class="header-bar">
       <h1>Manage Games</h1>
+      <div class="header-buttons">
+        <button id="logout-button-2" class="btn-red">Log Out</button>
+      </div>
     </div>
 
-    <div class="content">
-      <!-- Top: Filters -->
-      <div id="games-topbar">
-        <div class="filter-group">
-          <label for="season-filter"><strong>Season:</strong></label>
-          <select id="season-filter">
-            <option value="__all__">All</option>
-            <!-- Populated by JS -->
-          </select>
-        </div>
-        <div class="filter-group">
-          <label for="game-filter"><strong>Game:</strong></label>
-          <select id="game-filter">
-            <option value="__all__">All</option>
-            <!-- Populated by JS -->
-          </select>
-        </div>
-        <div class="filter-group">
-          <label for="search-input"><strong>Search Player:</strong></label>
-          <input type="text" id="search-input" placeholder="Player name…" />
-        </div>
+    <!-- Topbar: 
+         • Left: season filter, game filter, search box 
+         • Right: (optional extra actions; leave empty or remove if you don’t need them) -->
+    <div id="games-topbar">
+      <div class="filter-group">
+        <label for="season-filter"><strong>Season:</strong></label>
+        <select id="season-filter">
+          <option value="__all__">All</option>
+          <!-- Populated by JS -->
+        </select>
       </div>
+      <div class="filter-group">
+        <label for="game-filter"><strong>Game:</strong></label>
+        <select id="game-filter">
+          <option value="__all__">All</option>
+          <!-- Populated by JS -->
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="search-input"><strong>Search Player:</strong></label>
+        <input type="text" id="search-input" placeholder="Player name…" />
+      </div>
+    </div>
 
-      <!-- Bottom: Table -->
-      <div id="games-container">
-        <p class="no-games">Loading games…</p>
-      </div>
+    <!-- Bottom: games table (full-width) -->
+    <div id="games-container">
+      <p class="no-games">Loading games…</p>
     </div>
   </div>
 
@@ -196,6 +236,7 @@
     const GAME_OPTIONS_PATH       = "gameOptions.json";
     const LOCAL_STORAGE_TOKEN_KEY = "github_access_token";
 
+    /* ──────────── Helper: Fetch JSON ──────────── */
     async function fetchJSON(path) {
       const url = `${RAW_BASE_URL}/${path}?cachebust=${Date.now()}`;
       const res = await fetch(url);
@@ -203,6 +244,7 @@
       return await res.json();
     }
 
+    /* ──────────── Helper: Get file SHA & content ──────────── */
     async function getFileSHAandContent(path) {
       const endpoint = `${API_BASE_URL}/contents/${path}`;
       const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
@@ -221,6 +263,7 @@
       return { sha: data.sha, content: data.content };
     }
 
+    /* ──────────── Helper: Commit JSON up^ to GitHub ──────────── */
     async function commitJSON(newArray, path, commitMessage) {
       const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
       if (!accessToken) throw new Error("No GitHub token found. Please log in first.");
@@ -254,12 +297,15 @@
       return await res.json();
     }
 
+    /* ──────────── Log out ──────────── */
     function logout() {
       localStorage.removeItem(LOCAL_STORAGE_TOKEN_KEY);
       window.location.href = "index.html";
     }
     document.getElementById("logout-button").onclick = logout;
+    document.getElementById("logout-button-2").onclick = logout;
 
+    /* ──────────── Render Games: Fetch + Apply Filters + Show Table ──────────── */
     async function renderGamesList() {
       const container = document.getElementById("games-container");
       container.innerHTML = "<p class=\"no-games\">Loading games…</p>";
@@ -276,6 +322,7 @@
         return;
       }
 
+      // Populate the “Season” & “Game” filters
       populateFilters(seasons.all, gameNames);
 
       if (!games.length) {
@@ -283,6 +330,7 @@
         return;
       }
 
+      // Apply filters/search
       const seasonFilterVal = document.getElementById("season-filter").value;
       const gameFilterVal   = document.getElementById("game-filter").value;
       const searchVal       = document.getElementById("search-input").value.trim().toLowerCase();
@@ -307,6 +355,7 @@
         return;
       }
 
+      // Build and display the table
       const table = document.createElement("table");
       const headerRow = document.createElement("tr");
       ["#", "Date/Time", "Season", "Game Name", "Teams", "Winner", "Actions"].forEach((heading) => {
@@ -319,34 +368,41 @@
       filtered.forEach((game, idx) => {
         const tr = document.createElement("tr");
 
+        // 1) Index
         const idxCell = document.createElement("td");
         idxCell.innerText = (idx + 1).toString();
         tr.appendChild(idxCell);
 
+        // 2) Date/Time
         const dtCell = document.createElement("td");
         const dt = new Date(game.timestamp);
         dtCell.innerText = dt.toUTCString().replace(/ GMT$/, "");
         tr.appendChild(dtCell);
 
+        // 3) Season
         const seasonCell = document.createElement("td");
         seasonCell.innerText = game.season || "";
         tr.appendChild(seasonCell);
 
+        // 4) Game Name
         const nameCell = document.createElement("td");
         nameCell.innerText = game.gameName;
         tr.appendChild(nameCell);
 
+        // 5) Teams (each team on its own line)
         const teamsCell = document.createElement("td");
         teamsCell.innerHTML = game.teams
           .map((teamArr) => teamArr.join(", "))
           .join("<br />");
         tr.appendChild(teamsCell);
 
+        // 6) Winner
         const winCell = document.createElement("td");
         const winners = game.teams[game.winningTeamIndex] || [];
         winCell.innerText = winners.join(", ");
         tr.appendChild(winCell);
 
+        // 7) Actions (Delete)
         const actionCell = document.createElement("td");
         const delBtn = document.createElement("button");
         delBtn.className = "delete-button";
@@ -362,6 +418,7 @@
       container.appendChild(table);
     }
 
+    /* ──────────── Populate “Season” & “Game” Filters ──────────── */
     function populateFilters(allSeasons, allGameNames) {
       const seasonSelect = document.getElementById("season-filter");
       const gameSelect   = document.getElementById("game-filter");
@@ -388,9 +445,11 @@
       });
     }
 
+    /* ──────────── Confirm & Delete One Game from full list ──────────── */
     async function confirmAndDelete(gameObj, allGames) {
       if (!confirm("Are you sure you want to delete this game?")) return;
 
+      // Find index in the entire array
       const idx = allGames.findIndex(
         (g) =>
           g.timestamp === gameObj.timestamp &&

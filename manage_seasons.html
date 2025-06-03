@@ -51,7 +51,6 @@
     .content {
       margin-left: 220px;
       padding: 1.5rem;
-      width: calc(100% - 220px);
     }
     .header-bar {
       display: flex;
@@ -108,7 +107,6 @@
       border-radius: 4px;
       padding: 0.4rem;
       font-size: 1rem;
-      min-width: 200px;
     }
     #set-current-button {
       background-color: rgb(70, 175, 70);   /* Elib.Positive */
@@ -137,21 +135,16 @@
       list-style: none;
       padding: 0;
       margin: 0 0 1rem 0;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
     }
     #seasons-list li {
-      background-color: rgb(56, 56, 56);
-      border-radius: 4px;
-      padding: 0.5rem 1rem;
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 0.5rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgb(56, 56, 56);
     }
-    #seasons-list li span {
-      color: rgb(240, 240, 240);
-      font-size: 0.95rem;
+    #seasons-list li:last-child {
+      border-bottom: none;
     }
     .remove-season-button {
       background-color: rgb(190, 65, 65);   /* Elib.Negative */
@@ -179,7 +172,6 @@
       border-radius: 4px;
       padding: 0.4rem;
       font-size: 1rem;
-      min-width: 200px;
     }
     #add-season-form button {
       background-color: rgb(70, 175, 70);   /* Elib.Positive */
