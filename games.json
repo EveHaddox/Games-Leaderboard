@@ -30,5 +30,22 @@
       ]
     ],
     "winningTeamIndex": 2
+  },
+  {
+    "timestamp": "2025-06-03T14:26:50.654Z",
+    "season": "2023-2024",
+    "gameName": "War Selection",
+    "teams": [
+      [
+        "Eve",
+        "Donat",
+        "Drozd"
+      ],
+      [
+        "Masorem",
+        "Mnichu"
+      ]
+    ],
+    "winningTeamIndex": 0
   }
 ]
