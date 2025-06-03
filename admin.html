@@ -285,7 +285,7 @@
     const LOCAL_STORAGE_TOKEN_KEY = "github_access_token";
     const ensureAuth = () => {
       if (!localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY)) {
-        window.location.href = "admin.html";
+        window.location.href = "dashboard.html";
       }
     };
     document.addEventListener("DOMContentLoaded", ensureAuth);

@@ -253,7 +253,7 @@
     // If there's no token, immediately redirect to admin.html
     function checkLogin() {
       if (!localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY)) {
-        window.location.href = "admin.html";
+        window.location.href = "dashboard.html";
       }
     }
 
@@ -443,7 +443,7 @@
     //  • Otherwise bind buttons and render UI
     function initializePage() {
       if (!localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY)) {
-        window.location.href = "admin.html";
+        window.location.href = "dashboard.html";
         return;
       }
 
