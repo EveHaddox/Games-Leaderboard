@@ -250,107 +250,96 @@
     const SEASONS_PATH = "seasons.json";
     const API_BASE_URL = `https://api.github.com/repos/EveHaddox/Games-Leaderboard`;
 
-    // If there's no token, immediately redirect to admin.html
-    function checkLogin() {
-      if (!localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY)) {
-        window.location.href = "dashboard.html";
-      }
-    }
-
-    // Log out: remove token and send back to index.html
     function logout() {
-      localStorage.removeItem(LOCAL_STORAGE_TOKEN_KEY);
-      window.location.href = "index.html";
+        localStorage.removeItem(LOCAL_STORAGE_TOKEN_KEY);
+        window.location.href = "index.html";
     }
 
-    // Fetch raw JSON from GitHub
     async function fetchJSON(path) {
-      const url = `https://raw.githubusercontent.com/EveHaddox/Games-Leaderboard/main/${path}?cachebust=${Date.now()}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Failed to fetch ${path}`);
-      return await res.json();
+        const url = `https://raw.githubusercontent.com/EveHaddox/Games-Leaderboard/main/${path}?cachebust=${Date.now()}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Failed to fetch ${path}`);
+        return await res.json();
     }
 
-    // Get file metadata (SHA & Base64 content) from GitHub API
     async function getFileSHAandContent(path) {
-      const endpoint = `${API_BASE_URL}/contents/${path}`;
-      const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
-      const headers = { Accept: "application/vnd.github.v3+json" };
-      if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
-      const res = await fetch(endpoint, { headers });
-      if (res.status === 404) {
+        const endpoint = `${API_BASE_URL}/contents/${path}`;
+        const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
+        const headers = { Accept: "application/vnd.github.v3+json" };
+        if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+        const res = await fetch(endpoint, { headers });
+        if (res.status === 404) {
         return { sha: null, content: btoa(JSON.stringify({ current: "", all: [] })) };
-      }
-      if (!res.ok) {
+        }
+        if (!res.ok) {
         const msg = await res.text();
         throw new Error(`GitHub API error (${path}): ${msg}`);
-      }
-      const data = await res.json();
-      return { sha: data.sha, content: data.content };
+        }
+        const data = await res.json();
+        return { sha: data.sha, content: data.content };
     }
 
-    // Commit updated JSON back to GitHub
     async function commitJSON(newObj, path, commitMessage) {
-      const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
-      if (!accessToken) throw new Error("No GitHub token found. Please log in first.");
-      const { sha, content: oldBase64 } = await getFileSHAandContent(path);
-      const newContentString = JSON.stringify(newObj, null, 2);
-      const newContentBase64 = btoa(unescape(encodeURIComponent(newContentString)));
+        const accessToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
+        if (!accessToken) throw new Error("No GitHub token found. Please log in first.");
+        const { sha, content: oldBase64 } = await getFileSHAandContent(path);
+        const newContentString = JSON.stringify(newObj, null, 2);
+        const newContentBase64 = btoa(unescape(encodeURIComponent(newContentString)));
 
-      const endpoint = `${API_BASE_URL}/contents/${path}`;
-      const body = {
+        const endpoint = `${API_BASE_URL}/contents/${path}`;
+        const body = {
         message: commitMessage,
         content: newContentBase64,
         ...(sha ? { sha } : {}),
         branch: "main"
-      };
+        };
 
-      const res = await fetch(endpoint, {
+        const res = await fetch(endpoint, {
         method: "PUT",
         headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: "application/vnd.github.v3+json",
-          "Content-Type": "application/json"
+            Authorization: `Bearer ${accessToken}`,
+            Accept: "application/vnd.github.v3+json",
+            "Content-Type": "application/json"
         },
         body: JSON.stringify(body)
-      });
-      if (!res.ok) {
+        });
+        if (!res.ok) {
         const errText = await res.text();
         throw new Error(`GitHub commit failed (${path}): ${errText}`);
-      }
-      return await res.json();
+        }
+        return await res.json();
     }
 
-    // Populate the “Current Season” dropdown and the list below
+    // ─── Populate the UI from seasons.json ───
     async function renderSeasonsUI() {
-      const select = document.getElementById("current-season-select");
-      const list = document.getElementById("seasons-list");
-      const errorDiv = document.getElementById("manage-error");
+        const select = document.getElementById("current-season-select");
+        const list   = document.getElementById("seasons-list");
+        const errorDiv = document.getElementById("manage-error");
 
-      select.innerHTML = "";
-      list.innerHTML = "";
-      errorDiv.innerText = "";
+        select.innerHTML = "";
+        list.innerHTML = "";
+        errorDiv.innerText = "";
 
-      let data;
-      try {
+        let data;
+        try {
         data = await fetchJSON(SEASONS_PATH);
-      } catch (err) {
+        } catch (err) {
         errorDiv.innerText = "Error loading seasons: " + err.message;
         return;
-      }
-      const { current, all } = data;
+        }
+        const { current, all } = data;
 
-      // Populate current‐season <select>
-      all.forEach((seasonName) => {
+        // Populate dropdown
+        all.forEach((seasonName) => {
         const opt = document.createElement("option");
         opt.value = seasonName;
         opt.innerText = seasonName;
         if (seasonName === current) opt.selected = true;
         select.appendChild(opt);
-      });
+        });
 
-      // Populate the list below
-      all.forEach((seasonName, idx) => {
+        // Populate list below
+        all.forEach((seasonName, idx) => {
         const li = document.createElement("li");
         const span = document.createElement("span");
         span.innerText = seasonName + (seasonName === current ? " (current)" : "");
@@ -363,45 +352,45 @@
         li.appendChild(btn);
 
         list.appendChild(li);
-      });
+        });
     }
 
-    // Handle adding a new season
+    // ─── When user clicks “Add” ───
     async function onAddSeasonSubmit(event) {
-      event.preventDefault();
-      const input = document.getElementById("new-season-name");
-      const newName = input.value.trim();
-      const errorDiv = document.getElementById("manage-error");
-      if (!newName) return;
+        event.preventDefault();
+        const input   = document.getElementById("new-season-name");
+        const newName = input.value.trim();
+        const errorDiv = document.getElementById("manage-error");
+        if (!newName) return;
 
-      try {
+        try {
         const { sha, content: oldBase64 } = await getFileSHAandContent(SEASONS_PATH);
         const data = JSON.parse(atob(oldBase64));
         const { all } = data;
-
         if (all.includes(newName)) {
-          errorDiv.innerText = "That season already exists.";
-          return;
+            errorDiv.innerText = "That season already exists.";
+            return;
         }
 
         // New season becomes current
         const newAll = all.concat(newName);
         const newObj = { current: newName, all: newAll };
 
+        // ⏤⏤⏤ Commit, then immediately re-draw UI:
         await commitJSON(newObj, SEASONS_PATH, `Add and set current season: ${newName}`);
         input.value = "";
         errorDiv.innerText = "";
         await renderSeasonsUI();
-      } catch (err) {
+        } catch (err) {
         errorDiv.innerText = "Error adding season: " + err.message;
-      }
+        }
     }
 
-    // Handle removing a season
+    // ─── When user clicks “Remove” next to a season ───
     async function removeSeason(idx) {
-      const errorDiv = document.getElementById("manage-error");
-      errorDiv.innerText = "";
-      try {
+        const errorDiv = document.getElementById("manage-error");
+        errorDiv.innerText = "";
+        try {
         const { sha, content: oldBase64 } = await getFileSHAandContent(SEASONS_PATH);
         const data = JSON.parse(atob(oldBase64));
         const { current, all } = data;
@@ -410,50 +399,50 @@
 
         let newCurrent = current;
         if (removed === current) {
-          newCurrent = newAll.length ? newAll[0] : "";
+            newCurrent = newAll.length ? newAll[0] : "";
         }
         const newObj = { current: newCurrent, all: newAll };
+
+        // ⏤⏤⏤ Commit, then immediately re-draw UI:
         await commitJSON(newObj, SEASONS_PATH, `Remove season: ${removed}`);
         await renderSeasonsUI();
-      } catch (err) {
+        } catch (err) {
         errorDiv.innerText = "Error removing season: " + err.message;
-      }
+        }
     }
 
-    // Handle setting a season as current
+    // ─── When user clicks “Set Current” ───
     async function onSetCurrentSubmit() {
-      const select = document.getElementById("current-season-select");
-      const newCurrent = select.value;
-      const errorDiv = document.getElementById("manage-error");
-      errorDiv.innerText = "";
-      try {
+        const select   = document.getElementById("current-season-select");
+        const newCurrent = select.value;
+        const errorDiv = document.getElementById("manage-error");
+        errorDiv.innerText = "";
+        try {
         const { sha, content: oldBase64 } = await getFileSHAandContent(SEASONS_PATH);
         const data = JSON.parse(atob(oldBase64));
         const { all } = data;
         const newObj = { current: newCurrent, all: all };
+
+        // ⏤⏤⏤ Commit, then immediately re-draw UI:
         await commitJSON(newObj, SEASONS_PATH, `Set current season: ${newCurrent}`);
         await renderSeasonsUI();
-      } catch (err) {
+        } catch (err) {
         errorDiv.innerText = "Error setting current season: " + err.message;
-      }
+        }
     }
 
-    // Initialize page:
-    //  • If no token, redirect to admin.html
-    //  • Otherwise bind buttons and render UI
     function initializePage() {
-      if (!localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY)) {
+        if (!localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY)) {
         window.location.href = "dashboard.html";
         return;
-      }
-
-      document.getElementById("logout-btn-header").onclick = logout;
-      document.getElementById("add-season-form").onsubmit = onAddSeasonSubmit;
-      document.getElementById("set-current-button").onclick = onSetCurrentSubmit;
-      renderSeasonsUI();
+        }
+        document.getElementById("logout-btn-header").onclick = logout;
+        document.getElementById("add-season-form").onsubmit = onAddSeasonSubmit;
+        document.getElementById("set-current-button").onclick = onSetCurrentSubmit;
+        renderSeasonsUI();
     }
 
     document.addEventListener("DOMContentLoaded", initializePage);
-  </script>
+    </script>
 </body>
 </html>

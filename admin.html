@@ -683,8 +683,16 @@
         }`;
         await commitJSON(newArray, GAMES_JSON_PATH, commitMsg);
 
+        // ← instead of reload, just clear/reset the form and re-populate any affected dropdowns:
         alert("Game added successfully!");
-        window.location.reload();
+        document.getElementById("add-game-form").reset();
+
+        // Refresh the player datalist so new players appear immediately:
+        await populatePlayerDatalist();
+
+        // Re-initialize team inputs & winningTeam select:
+        initializeTeamInputs();
+        updateWinningTeamOptions();
       } catch (err) {
         console.error(err);
         alert("Error adding game: " + err.message);
