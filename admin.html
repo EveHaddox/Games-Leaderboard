@@ -283,6 +283,14 @@
     const GAME_OPTIONS_PATH       = "gameOptions.json";
     const SEASONS_PATH            = "seasons.json";
     const LOCAL_STORAGE_TOKEN_KEY = "github_access_token";
+    const ensureAuth = () => {
+      if (!localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY)) {
+        window.location.href = "admin.html";
+      }
+    };
+    document.addEventListener("DOMContentLoaded", ensureAuth);
+    window.addEventListener("focus", ensureAuth);
+
 
     /* ──────────────── GENERIC JSON FETCH ──────────────── */
     async function fetchJSON(path) {

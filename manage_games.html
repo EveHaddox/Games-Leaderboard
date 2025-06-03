@@ -52,12 +52,13 @@
 
     /* Main content: fills everything to the right of the sidebar */
     .content {
-      margin-left: 220px;
-      padding: 1.5rem;
-      width: calc(100% - 220px);
+      margin-left: 220px;  /* Sidebar width */
+      width: calc(100vw - 220px);  /* Fill the available viewport width */
+      padding: 1rem;
       display: flex;
       flex-direction: column;
-      gap: 1.5rem;
+      gap: 1rem;
+      box-sizing: border-box;
     }
 
     /* Header bar */
@@ -192,7 +193,7 @@
     <div class="header-bar">
       <h1>Manage Games</h1>
       <div class="header-buttons">
-        <button id="logout-button-2" class="btn-red">Log Out</button>
+
       </div>
     </div>
 
@@ -235,6 +236,15 @@
     const SEASONS_PATH            = "seasons.json";
     const GAME_OPTIONS_PATH       = "gameOptions.json";
     const LOCAL_STORAGE_TOKEN_KEY = "github_access_token";
+
+    const redirectIfNotAuth = () => {
+      if (!localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY)) {
+        window.location.href = "admin.html";
+      }
+    };
+    document.addEventListener("DOMContentLoaded", redirectIfNotAuth);
+    window.addEventListener("focus", redirectIfNotAuth);
+
 
     /* ──────────── Helper: Fetch JSON ──────────── */
     async function fetchJSON(path) {
@@ -303,8 +313,7 @@
       window.location.href = "index.html";
     }
     document.getElementById("logout-button").onclick = logout;
-    document.getElementById("logout-button-2").onclick = logout;
-
+    
     /* ──────────── Render Games: Fetch + Apply Filters + Show Table ──────────── */
     async function renderGamesList() {
       const container = document.getElementById("games-container");

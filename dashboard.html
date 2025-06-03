@@ -11,9 +11,9 @@
     /* ─────────────── Sidebar & Layout ─────────────── */
     body {
       margin: 0;
-      font-family: sans-serif;
-      background-color: rgb(26, 26, 26); /* Elib.Background */
-      color: rgb(240, 240, 240);
+      font-family: Arial, sans-serif;
+      background-color: rgb(26, 26, 26);  /* Elib.Colors.Background */
+      color: rgb(240, 240, 240);         /* Elib.Colors.PrimaryText */
     }
     .sidebar {
       position: fixed;
@@ -21,8 +21,8 @@
       left: 0;
       width: 220px;
       height: 100vh;
-      background-color: rgb(36, 36, 36);      /* Elib.Header */
-      border-right: 1px solid rgb(56, 56, 56); /* Elib.Scroller */
+      background-color: rgb(36, 36, 36);      /* Elib.Colors.Header */
+      border-right: 1px solid rgb(56, 56, 56); /* Elib.Colors.Scroller */
       display: flex;
       flex-direction: column;
       padding-top: 1rem;
@@ -33,14 +33,14 @@
     .sidebar .nav-item {
       padding: 0.75rem 1rem;
       font-size: 1rem;
-      color: rgb(200, 200, 200);               /* Elib.SecondaryText */
+      color: rgb(200, 200, 200);               /* Elib.Colors.SecondaryText */
       display: flex;
       align-items: center;
       gap: 0.5rem;
       cursor: pointer;
     }
     .sidebar .nav-item:hover {
-      background-color: rgb(56, 56, 56);      /* Elib.Scroller */
+      background-color: rgb(56, 56, 56);       /* Elib.Colors.Scroller */
       color: rgb(240, 240, 240);
     }
     .sidebar .nav-item.active {
@@ -49,47 +49,48 @@
       font-weight: bold;
     }
 
-    /* ─────────────── Main Content ─────────────── */
+    /* ─────────────── Main Content Wrapper ─────────────── */
     .content-wrapper {
-      margin-left: 220px;
-      padding: 1.5rem;
-      width: calc(100% - 220px);
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
+    padding: 1.5rem;
+    width: 100%;
+    height: 100vh; /* Set the full viewport height */
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    box-sizing: border-box;
     }
-    /* Center inner content and limit its width */
+
+    /* Center & constrain width */
     .content {
-      max-width: 1200px;
-      margin: 0 auto;
+      margin-left: 220px;
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
     }
 
-    .header-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.5rem 1rem;
-      background-color: rgb(36, 36, 36);     /* Elib.Header */
-      border-radius: 4px;
-    }
-    .header-bar h1 {
-      margin: 0;
-      font-size: 1.5rem;
-      color: rgb(240, 240, 240);
+    /* ─────────────── Dashboard Layout ─────────────── */
+    .dashboard-content {
+    display: flex;
+    gap: 1rem;
+    align-items: stretch; /* both panels match parent's height */
+    height: 100%;      /* Make sure it fills the .content-wrapper */
     }
 
-    /* ─────────────── Stats Cards & Charts ─────────────── */
-    .stats-container {
+    /* Left panel: stats grid over bar chart */
+    .left-panel {
+        flex: 3;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(2, 1fr);
       gap: 1rem;
     }
     .stat-card {
-      background-color: rgb(36, 36, 36);
-      border: 1px solid rgb(56, 56, 56);
+      background-color: rgb(36, 36, 36);   /* Elib.Colors.Header */
+      border: 1px solid rgb(56, 56, 56);   /* Elib.Colors.Scroller */
       border-radius: 8px;
       padding: 1rem;
       text-align: center;
@@ -104,23 +105,39 @@
       color: rgb(200, 200, 200);
     }
 
-    .charts-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 2rem;
-      justify-content: center;
-    }
-    .chart-box {
+    .bar-chart-container {
+      height: 400px; /* Set your desired height */
       background-color: rgb(36, 36, 36);
       border: 1px solid rgb(56, 56, 56);
       border-radius: 8px;
       padding: 1rem;
-      flex: 1 1 400px;
-      max-width: 600px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
     }
-    .chart-box canvas {
+    .bar-chart-container canvas {
       width: 100% !important;
-      height: auto !important;
+      height: 100% !important;
+    }
+
+    /* Right panel: wider for pie chart */
+    .right-panel {
+      flex: 2.5; /* increased from 1 → 1.5 */
+      display: flex;
+    }
+    .right-panel .chart-box {
+    flex: 1;
+    background-color: rgb(36, 36, 36);
+    border: 1px solid rgb(56, 56, 56);
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    width: auto;
+    height: calc(100% - 35px); /* now, with a parent height, this calc works instantly */
     }
   </style>
 
@@ -141,39 +158,44 @@
   <!-- ─────────────── Main Content Wrapper ─────────────── -->
   <div class="content-wrapper">
     <div class="content">
-      <div class="header-bar">
-        <h1>Dashboard</h1>
-      </div>
+      <!-- ─────────────── Dashboard Content ─────────────── -->
+      <div class="dashboard-content">
+        <!-- Left panel: Stats grid + Bar chart -->
+        <div class="left-panel">
+          <!-- 2×2 Stats Grid -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <h2 id="total-games">0</h2>
+              <p>Total Games</p>
+            </div>
+            <div class="stat-card">
+              <h2 id="total-players">0</h2>
+              <p>Total Players</p>
+            </div>
+            <div class="stat-card">
+              <h2 id="total-seasons">0</h2>
+              <p>Total Seasons</p>
+            </div>
+            <div class="stat-card">
+              <h2 id="total-game-types">0</h2>
+              <p>Distinct Game Names</p>
+            </div>
+          </div>
 
-      <!-- Stat Cards -->
-      <div class="stats-container">
-        <div class="stat-card">
-          <h2 id="total-games">0</h2>
-          <p>Total Games</p>
+          <!-- Wins per Game (bar chart) -->
+          <div class="bar-chart-container">
+            <canvas id="winsPerGameChart"></canvas>
+          </div>
         </div>
-        <div class="stat-card">
-          <h2 id="total-players">0</h2>
-          <p>Total Players</p>
-        </div>
-        <div class="stat-card">
-          <h2 id="total-seasons">0</h2>
-          <p>Total Seasons</p>
-        </div>
-        <div class="stat-card">
-          <h2 id="total-game-types">0</h2>
-          <p>Distinct Game Names</p>
-        </div>
-      </div>
 
-      <!-- Charts -->
-      <div class="charts-container">
-        <div class="chart-box">
-          <canvas id="winsPerGameChart"></canvas>
-        </div>
-        <div class="chart-box">
-          <canvas id="gamesPerSeasonChart"></canvas>
+        <!-- Right panel: Games per Season (pie chart) -->
+        <div class="right-panel">
+          <div class="chart-box">
+            <canvas id="gamesPerSeasonChart"></canvas>
+          </div>
         </div>
       </div>
+      <!-- ─────────────── End Dashboard Content ─────────────── -->
     </div>
   </div>
 
@@ -182,10 +204,19 @@
     const REPO_NAME               = "Games-Leaderboard";
     const RAW_BASE_URL            = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main`;
     const API_BASE_URL            = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}`;
+
     const GAMES_JSON_PATH         = "games.json";
     const GAME_OPTIONS_PATH       = "gameOptions.json";
     const SEASONS_PATH            = "seasons.json";
     const LOCAL_STORAGE_TOKEN_KEY = "github_access_token";
+    const ensureAuth = () => {
+      if (!localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY)) {
+        window.location.href = "admin.html";
+      }
+    };
+    document.addEventListener("DOMContentLoaded", ensureAuth);
+    window.addEventListener("focus", ensureAuth);
+
 
     function logout() {
       localStorage.removeItem(LOCAL_STORAGE_TOKEN_KEY);
@@ -254,7 +285,7 @@
       document.getElementById("total-seasons").innerText = totalSeasons;
       document.getElementById("total-game-types").innerText = totalGameTypes;
 
-      // Bar chart: Wins per Game
+      // ─── Wins per Game (bar chart) ───
       const winsData = buildWinsPerGameData(games);
       const ctx1 = document.getElementById("winsPerGameChart").getContext("2d");
       new Chart(ctx1, {
@@ -271,6 +302,7 @@
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: { display: false },
             title: {
@@ -285,46 +317,50 @@
         }
       });
 
-      // Pie chart: Games per Season
+      // ─── Games per Season (pie chart) ───
       const seasonData = buildGamesPerSeasonData(games);
       const ctx2 = document.getElementById("gamesPerSeasonChart").getContext("2d");
       new Chart(ctx2, {
         type: "pie",
         data: {
-          labels: Object.keys(seasonData),
-          datasets: [{
+            labels: Object.keys(seasonData),
+            datasets: [{
             label: "Games per Season",
             data: Object.values(seasonData),
             backgroundColor: [
-              "rgba(214,174,34, 0.7)",   // Gold
-              "rgba(192,192,192, 0.7)", // Silver
-              "rgba(145,94,49, 0.7)",   // Bronze
-              "rgba(70,175,70,0.7)",    // Green
-              "rgba(180,58,58,0.7)",    // Red
-              "rgba(120,120,120,0.7)"   // Gray
+                "rgba(214,174,34,0.7)",
+                "rgba(192,192,192,0.7)",
+                "rgba(145,94,49,0.7)",
+                "rgba(70,175,70,0.7)",
+                "rgba(180,58,58,0.7)",
+                "rgba(120,120,120,0.7)"
             ],
             borderColor: [
-              "rgba(214,174,34,1)",
-              "rgba(192,192,192,1)",
-              "rgba(145,94,49,1)",
-              "rgba(70,175,70,1)",
-              "rgba(180,58,58,1)",
-              "rgba(120,120,120,1)"
+                "rgba(214,174,34,1)",
+                "rgba(192,192,192,1)",
+                "rgba(145,94,49,1)",
+                "rgba(70,175,70,1)",
+                "rgba(180,58,58,1)",
+                "rgba(120,120,120,1)"
             ],
             borderWidth: 1
-          }]
+            }]
         },
         options: {
-          responsive: true,
-          plugins: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+            duration: 0  // disable animation for instant sizing
+            },
+            plugins: {
             legend: { position: "right", labels: { boxWidth: 20 } },
             title: {
-              display: true,
-              text: "Games Distribution by Season"
+                display: true,
+                text: "Games Distribution by Season"
             }
-          }
+            }
         }
-      });
+        });
     }
 
     document.addEventListener("DOMContentLoaded", renderDashboard);
