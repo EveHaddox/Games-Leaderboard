@@ -5,13 +5,31 @@
     "gameName": "Company of Heroes 2",
     "teams": [
       [
-        "Młynek",
+        "MÅynek",
         "Yaiba",
         "Kubiq"
       ],
       [
         "Drozdu",
         "Michu",
+        "SkÅik"
+      ]
+    ],
+    "winningTeamIndex": 0
+  },
+  {
+    "timestamp": "2025-06-17T04:28:29.125Z",
+    "season": "Sezon 1",
+    "gameName": "Company of Heroes 2",
+    "teams": [
+      [
+        "Młynek",
+        "Yaiba",
+        "Michu"
+      ],
+      [
+        "Drozdu",
+        "Kubiq",
         "Skłik"
       ]
     ],
